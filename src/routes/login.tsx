@@ -12,6 +12,7 @@ export const Route = createFileRoute("/login")({ component: Login });
 
 type Mode = "in" | "up" | "verify" | "forgot" | "reset";
 
+/** Independent Health Trust login — email/password only. Build marker: HT-LOGIN-v2 */
 function Login() {
   const [mode, setMode] = useState<Mode>("in");
   const [email, setEmail] = useState("");
@@ -74,7 +75,6 @@ function Login() {
         return;
       }
 
-      // Sign in
       const res = await authClient.signIn.email({
         email,
         password,
@@ -104,7 +104,7 @@ function Login() {
     <PublicShell>
       <main className="mx-auto grid max-w-md gap-6 px-4 py-16">
         <div>
-          <p className="text-sm text-muted">Member access</p>
+          <p className="text-sm text-muted">Member access · email only</p>
           <h1 className="mt-1 text-3xl">{title}</h1>
         </div>
 
@@ -137,11 +137,6 @@ function Login() {
                     required
                     autoComplete="one-time-code"
                   />
-                  {mode === "verify" ? (
-                    <p className="text-xs text-muted">
-                      Sent to {email || "your email"}. Check spam if needed.
-                    </p>
-                  ) : null}
                 </div>
               ) : null}
 
@@ -196,7 +191,7 @@ function Login() {
                       type="checkbox"
                       checked={remember}
                       onChange={(e) => setRemember(e.target.checked)}
-                      className="size-4 rounded border-border accent-[var(--color-primary,#1B5C48)]"
+                      className="size-4 rounded border-border"
                     />
                     Remember me
                   </label>
