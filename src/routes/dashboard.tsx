@@ -18,7 +18,6 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ensureMember, setUsername } from "@/lib/health/actions";
-import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/dashboard")({ component: DashboardLayout });
 
@@ -75,7 +74,6 @@ function DashboardLayout() {
 
   return (
     <div className="min-h-screen bg-bg text-fg">
-      {/* Top bar — roomy, not compacted */}
       <header className="sticky top-0 z-40 border-b border-border/80 bg-bg/95 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:h-16">
           <button
@@ -103,7 +101,6 @@ function DashboardLayout() {
         </div>
       </header>
 
-      {/* Mobile slide-over menu */}
       {menuOpen ? (
         <div className="fixed inset-0 z-50 md:hidden">
           <button
@@ -148,7 +145,6 @@ function DashboardLayout() {
       ) : null}
 
       <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 pb-28 md:grid-cols-[220px_1fr] md:pb-8">
-        {/* Desktop sidebar */}
         <nav className="hidden md:flex md:flex-col md:gap-1">
           {nav.map((item) => (
             <Link
@@ -169,7 +165,6 @@ function DashboardLayout() {
         </main>
       </div>
 
-      {/* Mobile bottom bar — primary destinations */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-bg/95 backdrop-blur-md md:hidden">
         <div className="mx-auto flex max-w-lg items-stretch justify-around px-1 pb-[env(safe-area-inset-bottom)]">
           {nav.slice(0, 4).map((item) => (
