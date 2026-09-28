@@ -1,0 +1,36 @@
+{
+  "url": "http://127.0.0.1:8080/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Health Trust",
+      "hasCanvas": false,
+      "bodyTextLen": 1451,
+      "bodyTextHash": "7913a9bcdf9da96d6e220e01b635cc47dbc7462ed32a3c205da8da4814162bce",
+      "bodyTextPrefix": "HT Health Trust About How it works Tiers Referrals Updates Conta",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Health Trust",
+      "hasCanvas": false,
+      "bodyTextLen": 1408,
+      "bodyTextHash": "4d97a7d9e10a42a3f88995b8788d668e6f00851c66234f83254c0844820aa844",
+      "bodyTextPrefix": "HT Health Trust Sign in FarmGreat West Africa LLC · Eastern Ryse",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-preview.json"
+}
