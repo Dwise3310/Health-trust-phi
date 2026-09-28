@@ -52,43 +52,86 @@ export function SignInButtons() {
   );
 }
 
+/** Compact identity chip for dashboard / header — avoids cramped name + sign-out row. */
 export function UserButton() {
   const user = useCurrentUser();
   const [signingOut, setSigningOut] = useState(false);
+  const [open, setOpen] = useState(false);
   const gateSession = useSyncExternalStore(
     subscribeToNothing,
     hasGateSessionMarker,
     noGateSessionOnServer,
   );
   if (!user) return null;
+
   const label = user.displayName ?? user.primaryEmail ?? "Account";
+  const initial = label.charAt(0).toUpperCase();
+
   return (
-    <div className="flex items-center gap-2">
-      {user.profileImageUrl ? (
-        <img
-          src={user.profileImageUrl}
-          alt=""
-          className="h-8 w-8 rounded-full object-cover"
-        />
-      ) : (
-        <span className="grid h-8 w-8 place-items-center rounded-full bg-black/10 text-sm font-medium dark:bg-white/20">
-          {label.charAt(0).toUpperCase()}
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-2 rounded-full border border-border bg-surface py-1 pl-1 pr-2.5 transition hover:bg-border/40"
+        aria-expanded={open}
+        aria-label="Account menu"
+      >
+        {user.profileImageUrl ? (
+          <img
+            src={user.profileImageUrl}
+            alt=""
+            className="size-8 rounded-full object-cover"
+          />
+        ) : (
+          <span className="grid size-8 place-items-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
+            {initial}
+          </span>
+        )}
+        <span className="hidden max-w-[7rem] truncate text-sm font-medium sm:inline">
+          {label.split(" ")[0]}
         </span>
-      )}
-      <span className="text-sm font-medium">{label}</span>
-      {authEnabled && !gateSession && (
-        <button
-          type="button"
-          disabled={signingOut}
-          onClick={() => {
-            setSigningOut(true);
-            void signOut().catch(() => setSigningOut(false));
-          }}
-          className="cursor-pointer text-sm underline-offset-4 opacity-70 hover:underline disabled:cursor-wait disabled:no-underline"
-        >
-          {signingOut ? "Signing out…" : "Sign out"}
-        </button>
-      )}
+      </button>
+
+      {open ? (
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 z-40"
+            aria-label="Close account menu"
+            onClick={() => setOpen(false)}
+          />
+          <div className="absolute right-0 z-50 mt-2 w-52 overflow-hidden rounded-xl border border-border bg-bg shadow-lg">
+            <div className="border-b border-border px-3 py-2.5">
+              <p className="truncate text-sm font-medium">{label}</p>
+              {user.primaryEmail ? (
+                <p className="truncate text-xs text-muted">{user.primaryEmail}</p>
+              ) : null}
+            </div>
+            <div className="p-1">
+              <Link
+                to="/dashboard"
+                className="block rounded-lg px-3 py-2 text-sm hover:bg-surface"
+                onClick={() => setOpen(false)}
+              >
+                Dashboard
+              </Link>
+              {authEnabled && !gateSession ? (
+                <button
+                  type="button"
+                  disabled={signingOut}
+                  className="w-full rounded-lg px-3 py-2 text-left text-sm text-danger hover:bg-surface disabled:opacity-60"
+                  onClick={() => {
+                    setSigningOut(true);
+                    void signOut().catch(() => setSigningOut(false));
+                  }}
+                >
+                  {signingOut ? "Signing out…" : "Sign out"}
+                </button>
+              ) : null}
+            </div>
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }

@@ -2,12 +2,16 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { PublicShell } from "@/components/public-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { TIERS } from "@/lib/health/constants";
 import { formatHealth, formatNaira, nairaFromHealth } from "@/lib/utils";
 
 export const Route = createFileRoute("/tiers")({ component: Tiers });
 
 function Tiers() {
+  const { user, isPending } = useCurrentUserState();
+  const joinTo = !isPending && user ? "/dashboard" : "/login?next=/dashboard";
+
   return (
     <PublicShell>
       <main className="mx-auto max-w-6xl px-4 py-16">
@@ -33,10 +37,15 @@ function Tiers() {
                 <li>{t.durationMonths} months of Care Quota</li>
                 <li>Refreshes to 100% every 3 months</li>
                 <li>{t.refreshes} auto-renewals in term</li>
-                <li>Queue rank {t.queue === 1 ? "first" : t.queue === 2 ? "second" : "third"}</li>
+                <li>
+                  Queue rank{" "}
+                  {t.queue === 1 ? "first" : t.queue === 2 ? "second" : "third"}
+                </li>
               </ul>
-              <Button asChild>
-                <Link to="/login">Join {t.short}</Link>
+              <Button asChild className="mt-auto">
+                <Link to={joinTo}>
+                  {user ? `Join ${t.short} in dashboard` : `Join ${t.short}`}
+                </Link>
               </Button>
             </Card>
           ))}

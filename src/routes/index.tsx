@@ -3,12 +3,16 @@ import { ArrowRight, HeartPulse, Shield, Users } from "lucide-react";
 import { PublicShell } from "@/components/public-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { TIERS } from "@/lib/health/constants";
 import { formatHealth, formatNaira, nairaFromHealth } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({ component: Home });
 
 function Home() {
+  const { user, isPending } = useCurrentUserState();
+  const memberHref = !isPending && user ? "/dashboard" : "/tiers";
+
   return (
     <PublicShell>
       <main>
@@ -26,8 +30,9 @@ function Home() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild size="lg">
-              <Link to="/tiers">
-                Become a member <ArrowRight className="size-4" />
+              <Link to={memberHref}>
+                {user ? "Go to dashboard" : "Become a member"}{" "}
+                <ArrowRight className="size-4" />
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
