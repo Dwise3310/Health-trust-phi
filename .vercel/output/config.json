@@ -8,14 +8,21 @@
   "routes": [
     {
       "src": "/assets/login-BPZCp6gH.js",
-      "dest": "/assets/login-ht-v6.js",
+      "dest": "/assets/login-ht-v7.js",
       "headers": {
         "cache-control": "no-cache, no-store, must-revalidate, max-age=0"
       }
     },
     {
       "src": "/assets/login-ht-v5.js",
-      "dest": "/assets/login-ht-v6.js",
+      "dest": "/assets/login-ht-v7.js",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate, max-age=0"
+      }
+    },
+    {
+      "src": "/assets/login-ht-v6.js",
+      "dest": "/assets/login-ht-v7.js",
       "headers": {
         "cache-control": "no-cache, no-store, must-revalidate, max-age=0"
       }
