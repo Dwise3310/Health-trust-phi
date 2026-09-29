@@ -18,7 +18,9 @@ function Login() {
 	const [remember, setRemember] = (0, import_react.useState)(true);
 	const [showPassword, setShowPassword] = (0, import_react.useState)(false);
 	function onSocial(provider) {
-		setError(provider === "google" ? "Google sign-in is not connected yet. Use email for now." : "X sign-in is not connected yet. Use email for now.");
+		const msg = provider === "google" ? "Google sign-in is not connected yet.\n\nThis button is not wired to Google. Please use email and password for now." : "X (Twitter) sign-in is not connected yet.\n\nThis button is not wired to X. Please use email and password for now.";
+		try { alert(msg); } catch (e) {}
+		setError(provider === "google" ? "Google is not connected yet — use email for now." : "X is not connected yet — use email for now.");
 		setInfo(null);
 	}
 	async function onEmail(e) {
@@ -68,7 +70,13 @@ function Login() {
 						children: [
 							mode === "up" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "grid gap-1.5", children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, { htmlFor: "name", children: "Full name" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, { id: "name", value: name, onChange: (e) => setName(e.target.value), required: true })] }) : null,
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "grid gap-1.5", children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, { htmlFor: "email", children: "Email" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, { id: "email", type: "email", value: email, onChange: (e) => setEmail(e.target.value), required: true })] }),
-						mode !== "forgot" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "grid gap-1.5", children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, { htmlFor: "password", children: "Password" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "relative", children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, { id: "password", type: showPassword ? "text" : "password", value: password, onChange: (e) => setPassword(e.target.value), minLength: 8, required: true, className: "pr-11" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", className: "absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted hover:text-fg px-2", onClick: () => setShowPassword((v) => !v), "aria-label": showPassword ? "Hide password" : "Show password", children: showPassword ? "Hide" : "Show" })] })] }) : null,
+						mode !== "forgot" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "grid gap-1.5", children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "flex items-center justify-between", children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Label, { htmlFor: "password", children: "Password" }),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", className: "text-xs font-medium text-primary hover:underline", onClick: () => setShowPassword((v) => !v), "aria-label": showPassword ? "Hide password" : "Show password", children: showPassword ? "Hide password" : "Show password" })
+							]}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Input, { id: "password", type: showPassword ? "text" : "password", value: password, onChange: (e) => setPassword(e.target.value), minLength: 8, required: true })
+						] }) : null,
 						mode === "in" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "flex items-center justify-between gap-3", children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { className: "flex cursor-pointer items-center gap-2 text-sm text-muted", children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", { type: "checkbox", checked: remember, onChange: (e) => setRemember(e.target.checked), className: "size-4 rounded border-border" }), "Remember me"] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", className: "text-sm text-primary hover:underline", onClick: () => { setMode("forgot"); setError(null); setInfo(null); }, children: "Forgot password?" })] }) : null,
 						error ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "text-sm text-danger", children: error }) : null,
 						info ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "text-sm text-muted", children: info }) : null,
