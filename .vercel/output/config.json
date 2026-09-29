@@ -7,8 +7,15 @@
   "overrides": {},
   "routes": [
     {
+      "src": "/assets/client-bLCk0icn.js",
+      "dest": "/assets/client-ht-v4.js",
       "headers": {
-        "cache-control": "public, max-age=31536000, immutable"
+        "cache-control": "no-store, max-age=0"
+      }
+    },
+    {
+      "headers": {
+        "cache-control": "public, max-age=60, must-revalidate"
       },
       "src": "/assets/(.*)"
     },
