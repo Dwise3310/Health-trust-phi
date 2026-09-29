@@ -1,5 +1,3 @@
 {
-  "framework": null,
-  "installCommand": "npm install --no-audit --no-fund",
-  "buildCommand": "npx vite build"
+  "installCommand": "npm install --omit=dev --no-audit --no-fund"
 }
