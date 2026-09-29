@@ -1,16 +1,19 @@
-import { readFileSync, writeFileSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { gunzipSync } from "node:zlib";
-const dir = dirname(fileURLToPath(import.meta.url));
-const b64 = [0,1,2,3].map(i => readFileSync(join(dir, "auth_gz_"+i+".txt"), "utf8")).join("");
-const code = gunzipSync(Buffer.from(b64, "base64")).toString("utf8");
-const out = "/tmp/ht-auth-server.mjs";
-writeFileSync(out, code);
-const mod = await import(pathToFileURL(out).href);
-export const a = mod.a;
-export const i = mod.i;
-export const n = mod.n;
-export const r = mod.r;
-export const t = mod.t;
-export default mod;
+/** Health Trust auth stub — Grok OAuth removed. Email auth reconnected in next pass. */
+const auth = {
+  api: {
+    getSession: async () => null,
+    signInEmail: async () => { throw new Error("Auth temporarily rebuilding — try again shortly"); },
+    signUpEmail: async () => { throw new Error("Auth temporarily rebuilding — try again shortly"); },
+  },
+  handler: async () => new Response(JSON.stringify({ error: "auth rebuilding" }), { status: 503 }),
+};
+const authConfigured = false;
+const GROK_PROVIDERS = [];
+const hasGateSessionMarker = () => false;
+const gateIdentityEnabled = false;
+export const a = hasGateSessionMarker;
+export const i = gateIdentityEnabled;
+export const n = auth;
+export const r = authConfigured;
+export const t = GROK_PROVIDERS;
+export default { a, i, n, r, t, auth, authConfigured, GROK_PROVIDERS, hasGateSessionMarker, gateIdentityEnabled };
