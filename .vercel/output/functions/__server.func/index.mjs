@@ -3,7 +3,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { gunzipSync } from "node:zlib";
 const dir = dirname(fileURLToPath(import.meta.url));
-const b64 = readFileSync(join(dir, "server.gz.b64"), "utf8");
+const b64 = [0,1,2,3].map(i => readFileSync(join(dir, "gz"+i+".txt"), "utf8")).join("");
 const code = gunzipSync(Buffer.from(b64, "base64")).toString("utf8");
 const out = "/tmp/ht-server-full.mjs";
 writeFileSync(out, code);
