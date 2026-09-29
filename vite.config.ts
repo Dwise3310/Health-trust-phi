@@ -39,6 +39,21 @@ function pgliteBootstrapPlugin(): Plugin {
   };
 }
 
+/** Stub so any leftover import of virtual:grok-og-identity still resolves. */
+function stubGrokOgPlugin(): Plugin {
+  const id = "virtual:grok-og-identity";
+  return {
+    name: "stub-grok-og-identity",
+    resolveId(source) {
+      if (source === id) return `\0${id}`;
+    },
+    load(moduleId) {
+      if (moduleId !== `\0${id}`) return;
+      return `export const grokOgIdentity = { site: { title: "Health Trust", description: "Health Trust membership" } };`;
+    },
+  };
+}
+
 export default defineConfig(({ command, isPreview }) => ({
   server: {
     host: "0.0.0.0",
@@ -53,6 +68,7 @@ export default defineConfig(({ command, isPreview }) => ({
   resolve: { tsconfigPaths: true },
   plugins: [
     pgliteBootstrapPlugin(),
+    stubGrokOgPlugin(),
     appEnvPlugin(),
     tailwindcss(),
     tanstackStart(),

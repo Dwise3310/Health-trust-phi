@@ -1,4 +1,5 @@
 {
+  "framework": null,
   "installCommand": "npm install --no-audit --no-fund",
-  "buildCommand": "npm run build"
+  "buildCommand": "npx vite build"
 }
