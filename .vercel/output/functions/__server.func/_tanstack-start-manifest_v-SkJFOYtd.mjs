@@ -16,7 +16,7 @@ var tsrStartManifest = () => ({ routes: {
 			"/api/auth/$"
 		],
 		preloads: [
-			"/assets/index-BxbzgCZe.js",
+			"/assets/index-ht-v5.js",
 			"/assets/react-DB-4Zxce.js",
 			"/assets/preload-helper-V4qt2nnV.js",
 			"/assets/link-g8gEykvt.js",
@@ -27,7 +27,7 @@ var tsrStartManifest = () => ({ routes: {
 		scripts: [{ attrs: {
 			type: "module",
 			async: !0,
-			src: "/assets/index-BxbzgCZe.js"
+			src: "/assets/index-ht-v5.js"
 		} }]
 	},
 	"/": {
@@ -90,8 +90,8 @@ var tsrStartManifest = () => ({ routes: {
 		filePath: "/workspace/src/routes/login.tsx",
 		children: void 0,
 		preloads: [
-			"/assets/login-BPZCp6gH.js",
-			"/assets/client-bLCk0icn.js",
+			"/assets/login-ht-v5.js",
+			"/assets/client-ht-v4.js",
 			"/assets/button-C6jVVrHv.js",
 			"/assets/card-BtwX81HO.js",
 			"/assets/label-WHjs93qT.js"
