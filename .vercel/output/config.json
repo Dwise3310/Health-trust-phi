@@ -7,17 +7,17 @@
   "overrides": {},
   "routes": [
     {
-      "src": "/assets/client-bLCk0icn.js",
-      "dest": "/assets/client-ht-v4.js",
+      "src": "/assets/(.*)",
       "headers": {
-        "cache-control": "no-store, max-age=0"
+        "cache-control": "no-cache, no-store, must-revalidate, max-age=0"
       }
     },
     {
+      "src": "/(.*)",
       "headers": {
-        "cache-control": "public, max-age=60, must-revalidate"
+        "cache-control": "no-cache, no-store, must-revalidate, max-age=0"
       },
-      "src": "/assets/(.*)"
+      "continue": true
     },
     {
       "handle": "filesystem"
