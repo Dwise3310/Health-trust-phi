@@ -7,6 +7,20 @@
   "overrides": {},
   "routes": [
     {
+      "src": "/assets/login-BPZCp6gH.js",
+      "dest": "/assets/login-ht-v5.js",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate, max-age=0"
+      }
+    },
+    {
+      "src": "/assets/client-bLCk0icn.js",
+      "dest": "/assets/client-ht-v4.js",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate, max-age=0"
+      }
+    },
+    {
       "src": "/assets/(.*)",
       "headers": {
         "cache-control": "no-cache, no-store, must-revalidate, max-age=0"
