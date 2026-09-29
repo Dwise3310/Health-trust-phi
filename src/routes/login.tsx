@@ -12,7 +12,7 @@ export const Route = createFileRoute("/login")({ component: Login });
 
 type Mode = "in" | "up" | "verify" | "forgot" | "reset";
 
-/** Health Trust login v3 — email/password live; Google/X visible but not wired */
+/** Health Trust login — email/password live; Google/X show clear "not wired" popup */
 function Login() {
   const [mode, setMode] = useState<Mode>("in");
   const [email, setEmail] = useState("");
@@ -32,11 +32,21 @@ function Login() {
   }
 
   function onSocialClick(provider: "google" | "x") {
+    const msg =
+      provider === "google"
+        ? "Google sign-in is not connected yet.\n\nThis button is not wired to Google. Please use email and password for now."
+        : "X (Twitter) sign-in is not connected yet.\n\nThis button is not wired to X. Please use email and password for now.";
+    try {
+      alert(msg);
+    } catch {
+      /* ignore */
+    }
     setError(
       provider === "google"
-        ? "Google sign-in is not connected yet. Use email for now."
-        : "X sign-in is not connected yet. Use email for now.",
+        ? "Google is not connected yet — use email for now."
+        : "X is not connected yet — use email for now.",
     );
+    setInfo(null);
   }
 
   async function onSubmit(e: FormEvent) {
@@ -210,7 +220,7 @@ function Login() {
                       />
                       <button
                         type="button"
-                        className="absolute right-2 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-md text-muted hover:text-fg"
+                        className="absolute right-1 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-md text-primary hover:bg-bg"
                         onClick={() => setShowPassword((v) => !v)}
                         aria-label={showPassword ? "Hide password" : "Show password"}
                       >
@@ -241,7 +251,11 @@ function Login() {
                   </div>
                 ) : null}
 
-                {error ? <p className="text-sm text-danger">{error}</p> : null}
+                {error ? (
+                  <p className="rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+                    {error}
+                  </p>
+                ) : null}
                 {info ? <p className="text-sm text-muted">{info}</p> : null}
 
                 <Button type="submit" disabled={busy}>
