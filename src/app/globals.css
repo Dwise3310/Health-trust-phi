@@ -1,0 +1,142 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f6f1e8;
+  --fg: #17211c;
+  --muted: #5b6b63;
+  --primary: #1b5c48;
+  --primary-fg: #f7f3ea;
+  --card: #fffcf6;
+  --border: #e3d8c6;
+  --danger: #9b2c2c;
+  --warn: #8a5a12;
+  --ring: #1b5c48;
+  --overlay: rgba(246, 241, 232, 0.45);
+}
+
+html.dark {
+  --bg: #121816;
+  --fg: #eef3ef;
+  --muted: #9aaba3;
+  --primary: #6fbf9a;
+  --primary-fg: #0e1613;
+  --card: #1a221f;
+  --border: #2c3a34;
+  --danger: #e07a7a;
+  --warn: #e0b56a;
+  --ring: #6fbf9a;
+  --overlay: rgba(18, 24, 22, 0.45);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-fg: var(--primary-fg);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-danger: var(--danger);
+  --color-warn: var(--warn);
+  --font-sans: var(--font-outfit);
+  --font-serif: var(--font-fraunces);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+h1,
+h2,
+h3,
+.serif {
+  font-family: var(--font-serif), Georgia, serif;
+  font-weight: 560;
+  letter-spacing: -0.02em;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.rise {
+  animation: rise 0.7s ease both;
+}
+
+.rise-2 {
+  animation: rise 0.85s ease 0.08s both;
+}
+
+.rise-3 {
+  animation: rise 0.9s ease 0.16s both;
+}
+
+.rise-4 {
+  animation: rise 1s ease 0.24s both;
+}
+
+@keyframes draw-ecg {
+  0% {
+    stroke-dashoffset: 920;
+    opacity: 1;
+  }
+  72% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0.25;
+  }
+}
+
+.ecg-draw {
+  stroke-dasharray: 920;
+  stroke-dashoffset: 920;
+  animation: draw-ecg 2.4s ease-in-out infinite;
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+
+.pulse-soft {
+  animation: pulse-soft 2.4s ease-in-out infinite;
+}
+
+.slider-panel {
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
