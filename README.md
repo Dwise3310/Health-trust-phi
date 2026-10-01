@@ -28,3 +28,5 @@ In Supabase Auth, add the same site URL plus `https://health-trust-phi.vercel.ap
 Run `supabase/schema.sql` in the Supabase SQL editor. It creates profiles, wallets (with a unique `HT` account number), Care Quota tables, staff roles, and RLS.
 
 Email confirmation can stay on. The login screen tells people to check their inbox.
+
+Vercel should detect Next.js automatically.
