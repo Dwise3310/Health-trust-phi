@@ -12,9 +12,9 @@ export default function HowItWorksPage() {
     <PublicShell>
       <main className="mx-auto max-w-3xl px-4 py-16">
         <p className="text-sm text-primary">The mechanics</p>
-        <h1 className="mt-2 text-4xl md:text-5xl">How Health Trust works</h1>
+        <h1 className="mt-2 text-4xl md:text-5xl">How Sure Health works</h1>
         <p className="mt-4 text-lg leading-relaxed text-muted">
-          Health Trust is a membership, not an insurance policy and not a
+          Sure Health is a membership, not an insurance policy and not a
           free clinic. You buy a tier. That tier gives you a Care Quota: a
           percentage of consultation and diagnosis that {HOSPITAL.name} will
           treat as covered, for the life of the plan, refreshing every three

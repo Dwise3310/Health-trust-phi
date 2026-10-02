@@ -18,7 +18,7 @@ export default function DashboardLayout({
   useEffect(() => {
     const supabase = createClient();
     if (!supabase) {
-      setEmail("preview@healthtrust.ng");
+      setEmail("preview@surehealth.ng");
       return;
     }
     supabase.auth.getUser().then(({ data }) => {

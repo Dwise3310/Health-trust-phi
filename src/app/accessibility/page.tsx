@@ -5,7 +5,7 @@ export const metadata = { title: "Accessibility" };
 
 export default function Page() {
   return (
-    <LegalLayout title="Accessibility" kicker="Trust">
+    <LegalLayout title="Accessibility" kicker="Sure Health">
       <p>
         We aim for WCAG 2.2 AA on public pages: keyboard paths, visible
         focus, contrast that holds in light and dark, labels on form

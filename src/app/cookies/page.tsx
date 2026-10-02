@@ -4,7 +4,7 @@ export const metadata = { title: "Cookie policy" };
 
 export default function Page() {
   return (
-    <LegalLayout title="Cookie policy" kicker="Trust">
+    <LegalLayout title="Cookie policy" kicker="Sure Health">
       <p>
         Essential cookies keep your session and remember light or dark
         mode plus your consent choice. They are required for the product

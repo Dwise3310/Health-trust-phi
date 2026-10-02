@@ -1,4 +1,4 @@
--- Health Trust · run in the Supabase SQL editor (production).
+-- Sure Health · run in the Supabase SQL editor (production).
 -- Auth users live in auth.users. This file is product tables + RLS.
 
 create extension if not exists pgcrypto;
@@ -129,7 +129,7 @@ create table if not exists public.audit_log (
   created_at timestamptz not null default now()
 );
 
-create or replace function public.ht_account_number()
+create or replace function public.sh_account_number()
 returns text
 language plpgsql
 as $$
@@ -137,14 +137,14 @@ declare
   candidate text;
 begin
   loop
-    candidate := 'HT' || lpad((floor(random() * 10000000000))::bigint::text, 10, '0');
+    candidate := 'SH' || lpad((floor(random() * 10000000000))::bigint::text, 10, '0');
     exit when not exists (select 1 from public.wallets where account_number = candidate);
   end loop;
   return candidate;
 end;
 $$;
 
-create or replace function public.ht_referral_code()
+create or replace function public.sh_referral_code()
 returns text
 language plpgsql
 as $$
@@ -152,7 +152,7 @@ declare
   candidate text;
 begin
   loop
-    candidate := 'HT-' || upper(substr(encode(gen_random_bytes(4), 'hex'), 1, 6));
+    candidate := 'SH-' || upper(substr(encode(gen_random_bytes(4), 'hex'), 1, 6));
     exit when not exists (select 1 from public.profiles where referral_code = candidate);
   end loop;
   return candidate;
@@ -171,11 +171,11 @@ begin
     new.id,
     coalesce(new.raw_user_meta_data->>'full_name', ''),
     coalesce(new.raw_user_meta_data->>'phone', ''),
-    public.ht_referral_code()
+    public.sh_referral_code()
   );
 
   insert into public.wallets (user_id, account_number)
-  values (new.id, public.ht_account_number());
+  values (new.id, public.sh_account_number());
 
   return new;
 end;

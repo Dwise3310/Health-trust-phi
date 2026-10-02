@@ -11,7 +11,7 @@ export default function CodesPage() {
   function onSubmit(e: FormEvent) {
     e.preventDefault();
     start("Creating code");
-    const code = `HT-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const code = `SH-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
     setCodes((list) => [{ code, percent }, ...list]);
     stop();
   }

@@ -1,12 +1,12 @@
 export const HOSPITAL = {
   name: "Eastern Ryse Specialist Hospital",
-  program: "Health Trust",
+  program: "Sure Health",
   sponsor: "FarmGreat West Africa LLC",
   country: "Nigeria",
-  email: "care@healthtrust.ng",
-  privacyEmail: "privacy@healthtrust.ng",
-  legalEmail: "legal@healthtrust.ng",
-  supportEmail: "support@healthtrust.ng",
+  email: "care@surehealth.ng",
+  privacyEmail: "privacy@surehealth.ng",
+  legalEmail: "legal@surehealth.ng",
+  supportEmail: "support@surehealth.ng",
   phone: "+234 000 000 0000",
   address:
     "Eastern Ryse Specialist Hospital, Nigeria. Exact street address will be published once the hospital pack is confirmed.",
@@ -15,7 +15,7 @@ export const HOSPITAL = {
 export const TIERS = {
   base: {
     id: "base" as const,
-    name: "Health Trust Base",
+    name: "Sure Health Base",
     short: "Base",
     priceHealth: 250,
     durationMonths: 6,
@@ -32,7 +32,7 @@ export const TIERS = {
   },
   plus: {
     id: "plus" as const,
-    name: "Health Trust Plus",
+    name: "Sure Health Plus",
     short: "Plus",
     priceHealth: 500,
     durationMonths: 9,
@@ -49,7 +49,7 @@ export const TIERS = {
   },
   prime: {
     id: "prime" as const,
-    name: "Health Trust Prime",
+    name: "Sure Health Prime",
     short: "Prime",
     priceHealth: 1000,
     durationMonths: 12,

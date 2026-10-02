@@ -5,7 +5,7 @@ export const metadata = { title: "Terms of service" };
 
 export default function Page() {
   return (
-    <LegalLayout title="Terms of service" kicker="Trust">
+    <LegalLayout title="Terms of service" kicker="Sure Health">
       <p>
         By creating an account you join {HOSPITAL.program} at{" "}
         {HOSPITAL.name}. Membership is a paid plan. It is not a licensed

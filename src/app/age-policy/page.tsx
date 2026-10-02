@@ -4,9 +4,9 @@ export const metadata = { title: "Age and children's data" };
 
 export default function Page() {
   return (
-    <LegalLayout title="Age and children's data" kicker="Trust">
+    <LegalLayout title="Age and children's data" kicker="Sure Health">
       <p>
-        Health Trust accounts are for people 18 and older. A parent or
+        Sure Health accounts are for people 18 and older. A parent or
         guardian may create an account and then issue a Care Quota code
         for a child who needs treatment.
       </p>

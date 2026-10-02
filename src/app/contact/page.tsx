@@ -90,7 +90,7 @@ export default function ContactPage() {
               onChange={(e) => setConsent(e.target.checked)}
               required
             />
-            I agree that Health Trust may use this form to reply. We do not
+            I agree that Sure Health may use this form to reply. We do not
             sell enquiry data.
           </label>
           <button

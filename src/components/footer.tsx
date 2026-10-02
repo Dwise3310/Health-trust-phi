@@ -45,7 +45,7 @@ export function Footer() {
           </div>
         </div>
         <div>
-          <p className="text-sm font-semibold">Trust</p>
+          <p className="text-sm font-semibold">Legal</p>
           <div className="mt-3 grid gap-2 text-sm text-muted">
             {LEGAL.slice(0, 6).map((item) => (
               <NavLink key={item.href} href={item.href}>

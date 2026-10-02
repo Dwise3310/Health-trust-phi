@@ -5,9 +5,9 @@ export const metadata = { title: "Privacy policy" };
 
 export default function Page() {
   return (
-    <LegalLayout title="Privacy policy" kicker="Trust">
+    <LegalLayout title="Privacy policy" kicker="Sure Health">
       <p>
-        Last updated 29 September 2026. Health Trust, operated with{" "}
+        Last updated 29 September 2026. Sure Health, operated with{" "}
         {HOSPITAL.name} and {HOSPITAL.sponsor}, collects only what we need
         to run membership, wallets, bookings, and care records.
       </p>

@@ -1,9 +1,10 @@
-# Health Trust
+# Sure Health
 
-Independent web app for Health Trust at Eastern Ryse Specialist Hospital, sponsored by FarmGreat West Africa LLC.
+Independent web app for Sure Health at Eastern Ryse Specialist Hospital, sponsored by FarmGreat West Africa LLC.
 
 Stack: Next.js on Vercel, Supabase for auth and data. Email and password
-auth only. No third-party social login brokers.
+sign in is live. Google sign in is on the form; connect the Google client
+in Supabase Auth when the hospital keys are ready.
 
 ## Local
 
@@ -25,8 +26,10 @@ In Supabase Auth, add the same site URL plus `https://health-trust-phi.vercel.ap
 
 ## Database
 
-Run `supabase/schema.sql` in the Supabase SQL editor. It creates profiles, wallets (with a unique `HT` account number), Care Quota tables, staff roles, and RLS.
+Run `supabase/schema.sql` in the Supabase SQL editor. It creates profiles, wallets (with a unique `SH` account number), Care Quota tables, staff roles, and RLS.
 
-Email confirmation can stay on. The login screen tells people to check their inbox.
+If you already ran an earlier schema, run the file again. Table creates are `if not exists`. Account and referral functions are replaced so new members get `SH` numbers.
+
+Email confirmation can stay on. Sign up asks people to verify their email before the account is created.
 
 Vercel should detect Next.js automatically.

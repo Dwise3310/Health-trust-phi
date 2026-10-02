@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { usePathname } from "next/navigation";
@@ -29,31 +30,50 @@ export function useLoading() {
 
 export function LoadingProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [count, setCount] = useState(0);
+  const [pending, setPending] = useState(false);
   const [label, setLabel] = useState("Loading");
-
-  const start = useCallback((nextLabel?: string) => {
-    if (nextLabel) setLabel(nextLabel);
-    setCount((n) => n + 1);
-  }, []);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const stop = useCallback(() => {
-    setCount((n) => Math.max(0, n - 1));
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
+    setPending(false);
   }, []);
 
+  const start = useCallback(
+    (nextLabel?: string) => {
+      if (nextLabel) setLabel(nextLabel);
+      setPending(true);
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => {
+        setPending(false);
+        timer.current = null;
+      }, 4200);
+    },
+    [],
+  );
+
   useEffect(() => {
-    setCount(0);
-  }, [pathname]);
+    stop();
+  }, [pathname, stop]);
+
+  useEffect(() => {
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, []);
 
   const value = useMemo(
-    () => ({ start, stop, pending: count > 0 }),
-    [start, stop, count],
+    () => ({ start, stop, pending }),
+    [start, stop, pending],
   );
 
   return (
     <LoadingContext.Provider value={value}>
       {children}
-      {count > 0 ? (
+      {pending ? (
         <div
           className="fixed inset-0 z-[80] grid place-items-center"
           style={{

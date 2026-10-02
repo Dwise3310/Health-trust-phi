@@ -4,7 +4,7 @@ export const metadata = { title: "Refund policy" };
 
 export default function Page() {
   return (
-    <LegalLayout title="Refund policy" kicker="Trust">
+    <LegalLayout title="Refund policy" kicker="Sure Health">
       <p>
         Unused Health in your wallet can be withdrawn to a Nigerian bank,
         subject to identity checks. That is a withdrawal, not a refund.

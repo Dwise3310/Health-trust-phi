@@ -4,14 +4,14 @@ export const metadata = { title: "Licenses" };
 
 export default function Page() {
   return (
-    <LegalLayout title="Licenses for fonts and images" kicker="Trust">
+    <LegalLayout title="Licenses for fonts and images" kicker="Sure Health">
       <p>
         Type: Outfit and Fraunces, served by next/font from Google Fonts,
         under the SIL Open Font License.
       </p>
       <p>
         Icons: Lucide, ISC license. Heartbeat loader is original line
-        work drawn for Health Trust. It is not a stock medical device
+        work drawn for Sure Health. It is not a stock medical device
         mark and it is not a clinical reading.
       </p>
       <p>

@@ -18,13 +18,7 @@ export function HeartbeatLoader({
       >
         <path
           className="ecg-draw"
-          d="M8 45 H78
-             L92 45 L102 18 L114 72 L126 45 H150
-             C150 45 156 28 168 28
-             C178 28 182 38 180 45
-             C178 38 182 28 192 28
-             C204 28 210 45 210 45
-             H234 L246 18 L258 72 L270 45 H352"
+          d="M8 45 H78 L90 45 L100 16 L112 74 L124 45 H170 L182 45 L192 16 L204 74 L216 45 H352"
           stroke="currentColor"
           strokeWidth="2.2"
           strokeLinecap="round"

@@ -5,7 +5,7 @@ export const metadata = { title: "Unsubscribe" };
 
 export default function Page() {
   return (
-    <LegalLayout title="Unsubscribe from emails" kicker="Trust">
+    <LegalLayout title="Unsubscribe from emails" kicker="Sure Health">
       <p>
         Membership receipts and security mail still go out. Newsletters
         and hospital updates do not. Use the unsubscribe link in the

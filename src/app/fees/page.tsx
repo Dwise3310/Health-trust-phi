@@ -12,15 +12,15 @@ export const metadata = { title: "Fees" };
 
 export default function Page() {
   return (
-    <LegalLayout title="Prices, with nothing hidden" kicker="Trust">
+    <LegalLayout title="Prices, with nothing hidden" kicker="Sure Health">
       <p>
         Every Health price below is also 100 naira per Health. If a
         payment provider later charges a bank fee, that fee will be shown
         on the confirm screen before you pay.
       </p>
-      <p>Health Trust Base: {formatPrice(TIERS.base.priceHealth)}</p>
-      <p>Health Trust Plus: {formatPrice(TIERS.plus.priceHealth)}</p>
-      <p>Health Trust Prime: {formatPrice(TIERS.prime.priceHealth)}</p>
+      <p>Sure Health Base: {formatPrice(TIERS.base.priceHealth)}</p>
+      <p>Sure Health Plus: {formatPrice(TIERS.plus.priceHealth)}</p>
+      <p>Sure Health Prime: {formatPrice(TIERS.prime.priceHealth)}</p>
       <p>Normal digital card: {formatPrice(CARD_PRICE_HEALTH)}</p>
       <p>VIP digital card: {formatPrice(VIP_CARD_PRICE_HEALTH)}</p>
       {CALL_PRICES.map((c) => (

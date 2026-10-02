@@ -5,7 +5,7 @@ export const metadata = { title: "Business details" };
 
 export default function Page() {
   return (
-    <LegalLayout title="Business details" kicker="Trust">
+    <LegalLayout title="Business details" kicker="Sure Health">
       <p>Program: {HOSPITAL.program}</p>
       <p>Hospital: {HOSPITAL.name}</p>
       <p>Sponsor: {HOSPITAL.sponsor}</p>

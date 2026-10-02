@@ -13,13 +13,13 @@ export function Header({ signedIn }: { signedIn?: boolean }) {
     <header className="sticky top-0 z-40 border-b border-border bg-bg/90 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
         <NavLink href="/" className="flex items-center gap-2">
-          <span className="grid size-9 place-items-center rounded-full border border-primary text-xs font-semibold text-primary">
-            HT
+          <span className="grid size-9 place-items-center rounded-full bg-primary text-[11px] font-semibold text-primary-fg">
+            SH
           </span>
           <span className="leading-tight">
             <span className="block text-sm font-semibold">{HOSPITAL.program}</span>
             <span className="block text-[11px] text-muted">
-              {HOSPITAL.sponsor}
+              {HOSPITAL.name}
             </span>
           </span>
         </NavLink>
@@ -40,13 +40,13 @@ export function Header({ signedIn }: { signedIn?: boolean }) {
           <ThemeToggle />
           <NavLink
             href={signedIn ? "/dashboard" : "/login"}
-            className="hidden rounded-full bg-primary px-4 py-2 text-sm text-primary-fg sm:inline-flex"
+            className="btn-press hidden rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-fg sm:inline-flex"
           >
             {signedIn ? "Dashboard" : "Sign in"}
           </NavLink>
           <button
             type="button"
-            className="inline-flex size-10 items-center justify-center rounded-full border border-border lg:hidden"
+            className="btn-press inline-flex size-10 items-center justify-center rounded-full border border-border lg:hidden"
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
             aria-label={open ? "Close menu" : "Open menu"}
@@ -73,7 +73,7 @@ export function Header({ signedIn }: { signedIn?: boolean }) {
           ))}
           <NavLink
             href={signedIn ? "/dashboard" : "/login"}
-            className="rounded-lg bg-primary px-3 py-2 text-center text-sm text-primary-fg"
+            className="btn-press rounded-full bg-primary px-3 py-2 text-center text-sm font-semibold text-primary-fg"
             onClick={() => setOpen(false)}
           >
             {signedIn ? "Dashboard" : "Sign in"}

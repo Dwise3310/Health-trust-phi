@@ -3,9 +3,13 @@
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { ActionButton } from "./action-button";
+import { GoogleButton } from "./google-button";
 import { useLoading } from "./loading-provider";
 import { NavLink } from "./nav-link";
+import { OtpModal } from "./otp-modal";
 import { PasswordField } from "./password-field";
+import { useToast } from "./toast";
 
 type Panel = "in" | "up" | "forgot";
 
@@ -14,12 +18,10 @@ export function AuthSlider() {
   const params = useSearchParams();
   const next = params.get("next") || "/dashboard";
   const { start, stop } = useLoading();
+  const { toast } = useToast();
   const supabase = useMemo(() => createClient(), []);
 
   const [panel, setPanel] = useState<Panel>("in");
-  const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
-
   const [inEmail, setInEmail] = useState("");
   const [inPassword, setInPassword] = useState("");
   const [remember, setRemember] = useState(true);
@@ -28,55 +30,127 @@ export function AuthSlider() {
   const [phone, setPhone] = useState("");
   const [upEmail, setUpEmail] = useState("");
   const [upPassword, setUpPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [ageOk, setAgeOk] = useState(false);
   const [termsOk, setTermsOk] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [otpOpen, setOtpOpen] = useState(false);
+  const [demoCode, setDemoCode] = useState("5665");
 
   const [resetEmail, setResetEmail] = useState("");
 
-  function note(kind: "error" | "info", message: string) {
-    setError(kind === "error" ? message : null);
-    setInfo(kind === "info" ? message : null);
+  const confirmClass =
+    confirm.length === 0
+      ? ""
+      : upPassword === confirm
+        ? "pw-match"
+        : upPassword.startsWith(confirm)
+          ? ""
+          : "pw-mismatch";
+
+  async function google(kind: "in" | "up") {
+    start(kind === "in" ? "Connecting Google" : "Creating with Google");
+    if (!supabase) {
+      stop();
+      toast(
+        "Google button is in place. Connect the hospital Google client in Supabase Auth to finish wiring.",
+      );
+      return;
+    }
+    const origin = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${origin}/auth/callback` },
+    });
+    if (error) {
+      stop();
+      toast(error.message);
+    }
   }
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
     if (!supabase) {
-      note("error", "Supabase is not connected yet. Add the project URL and anon key in Vercel env, then reload.");
+      toast("Supabase is not connected yet. Add the project keys in Vercel, then reload.");
       return;
     }
-    start("Signing in");
-    note("error", "");
-    const { error: err } = await supabase.auth.signInWithPassword({
+    start("Signing you in");
+    const { error } = await supabase.auth.signInWithPassword({
       email: inEmail,
       password: inPassword,
     });
     stop();
-    if (err) {
-      note("error", err.message);
+    if (error) {
+      toast(error.message);
       return;
     }
-    if (!remember) {
-      // Session still uses cookies. Remember-me is a product flag for later hard expiry.
-    }
-    start("Opening dashboard");
+    void remember;
+    toast("Welcome back");
+    start("Opening your desk");
     router.replace(next);
     router.refresh();
   }
 
-  async function signUp(e: React.FormEvent) {
-    e.preventDefault();
-    if (!ageOk || !termsOk) {
-      note("error", "Please confirm age and accept the terms before creating an account.");
-      return;
+  async function sendCode() {
+    const email = upEmail.trim();
+    if (!email.includes("@")) {
+      toast("Enter a valid email first");
+      return null;
     }
     if (!supabase) {
-      note("error", "Supabase is not connected yet. Add the project URL and anon key in Vercel env, then reload.");
+      const code = String(Math.floor(1000 + Math.random() * 9000));
+      setDemoCode(code);
+      toast(`Verification code sent. Demo code is ${code} until mail is live.`);
+      return `Demo code ${code}`;
+    }
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: true },
+    });
+    if (error) {
+      toast(error.message);
+      return error.message;
+    }
+    toast("Code sent. Check your inbox.");
+    return "Code sent. Check your inbox.";
+  }
+
+  async function verifyCode(code: string) {
+    if (!supabase) return code === demoCode;
+    const { error } = await supabase.auth.verifyOtp({
+      email: upEmail.trim(),
+      token: code,
+      type: "email",
+    });
+    if (error) {
+      toast(error.message);
+      return false;
+    }
+    return true;
+  }
+
+  async function signUp(e: React.FormEvent) {
+    e.preventDefault();
+    if (!emailVerified) {
+      toast("Verify your email first. Tap Send code.");
       return;
     }
-    start("Creating account");
-    const origin =
-      process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
-    const { error: err } = await supabase.auth.signUp({
+    if (!ageOk || !termsOk) {
+      toast("Confirm age and accept the terms before creating an account.");
+      return;
+    }
+    if (upPassword !== confirm) {
+      toast("Passwords do not match");
+      return;
+    }
+    start("Creating your Sure Health");
+    if (!supabase) {
+      stop();
+      toast("Account form is ready. Connect Supabase to actually create members.");
+      return;
+    }
+    const origin = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+    const { error } = await supabase.auth.signUp({
       email: upEmail,
       password: upPassword,
       options: {
@@ -84,15 +158,19 @@ export function AuthSlider() {
         emailRedirectTo: `${origin}/auth/callback`,
       },
     });
-    stop();
-    if (err) {
-      note("error", err.message);
+    if (error && !error.message.toLowerCase().includes("already")) {
+      stop();
+      toast(error.message);
       return;
     }
-    note(
-      "info",
-      "Account created. If email confirmation is on, check your inbox, then sign in.",
-    );
+    if (supabase) {
+      await supabase.auth.updateUser({
+        password: upPassword,
+        data: { full_name: name, phone },
+      });
+    }
+    stop();
+    toast("Account created. You can sign in now.");
     setPanel("in");
     setInEmail(upEmail);
   }
@@ -100,82 +178,73 @@ export function AuthSlider() {
   async function sendReset(e: React.FormEvent) {
     e.preventDefault();
     if (!supabase) {
-      note("error", "Supabase is not connected yet.");
+      toast("Supabase is not connected yet.");
       return;
     }
     start("Sending reset link");
-    const origin =
-      process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
-    const { error: err } = await supabase.auth.resetPasswordForEmail(
+    const origin = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+    const { error } = await supabase.auth.resetPasswordForEmail(
       resetEmail || inEmail,
       { redirectTo: `${origin}/login?reset=1` },
     );
     stop();
-    if (err) {
-      note("error", err.message);
-      return;
-    }
-    note(
-      "info",
-      "If that email exists, a reset link is on the way. Check your inbox.",
-    );
+    toast(error ? error.message : "If that email exists, a reset link is on the way.");
   }
 
-  const showForgot = panel === "forgot";
-  const showSignUp = panel === "up";
+  const up = panel === "up";
 
   return (
-    <div className="mx-auto w-full max-w-5xl overflow-hidden rounded-3xl border border-border bg-card shadow-[0_20px_60px_rgba(23,33,28,0.08)]">
-      <div className="relative grid min-h-[560px] md:grid-cols-2">
-        <section className="grid content-center gap-5 p-6 md:p-10">
-          <div>
-            <p className="text-sm text-muted">Welcome back</p>
-            <h1 className="mt-1 text-3xl">Sign in</h1>
-            <p className="mt-2 text-sm text-muted">
-              Use the email on your Health Trust account. Your wallet, Care
-              Quota, and cards sit behind this door.
-            </p>
-          </div>
-          {showForgot ? (
+    <>
+      <div className={`ht-auth mx-auto ${up ? "is-up" : ""}`}>
+        <section className="form-panel sign-in-panel">
+          {panel === "forgot" ? (
             <form className="grid gap-3" onSubmit={sendReset}>
-              <label className="grid gap-1.5 text-sm">
-                Email
+              <p className="text-sm text-muted">Reset access</p>
+              <h1 className="text-3xl">Forgot password</h1>
+              <p className="text-sm text-muted">
+                We will email a reset link. Membership receipts stay on.
+              </p>
+              <div className="field-group mt-2">
                 <input
                   type="email"
                   required
                   value={resetEmail || inEmail}
                   onChange={(e) => setResetEmail(e.target.value)}
                   autoComplete="email"
-                  className="rounded-xl border border-border bg-bg px-3 py-2.5"
                 />
-              </label>
-              <button
-                type="submit"
-                className="rounded-full bg-primary px-4 py-2.5 text-sm text-primary-fg"
-              >
+                <span className="field-notch">Email</span>
+              </div>
+              <ActionButton type="submit" variant="primary" feedback="Sending reset">
                 Send reset link
-              </button>
-              <button
-                type="button"
-                className="text-sm text-primary"
-                onClick={() => setPanel("in")}
-              >
+              </ActionButton>
+              <ActionButton variant="ghost" onClick={() => setPanel("in")}>
                 Back to sign in
-              </button>
+              </ActionButton>
             </form>
           ) : (
             <form className="grid gap-3" onSubmit={signIn}>
-              <label className="grid gap-1.5 text-sm">
-                Email
+              <p className="text-sm text-muted">Eastern Ryse desk</p>
+              <h1 className="text-3xl">Sign in</h1>
+              <p className="text-sm text-muted">
+                Your wallet, Care Quota, cards, and pharmacy orders sit behind this door.
+              </p>
+              <GoogleButton
+                label="Continue with Google"
+                onClick={() => google("in")}
+              />
+              <p className="text-center text-[11px] uppercase tracking-[0.18em] text-muted">
+                or email
+              </p>
+              <div className="field-group">
                 <input
                   type="email"
                   required
                   value={inEmail}
                   onChange={(e) => setInEmail(e.target.value)}
                   autoComplete="email"
-                  className="rounded-xl border border-border bg-bg px-3 py-2.5"
                 />
-              </label>
+                <span className="field-notch">Email</span>
+              </div>
               <PasswordField
                 id="signin-password"
                 label="Password"
@@ -193,76 +262,79 @@ export function AuthSlider() {
                   />
                   Remember me
                 </label>
-                <button
-                  type="button"
-                  className="text-sm text-primary"
+                <ActionButton
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setPanel("forgot")}
                 >
                   Forgot password?
-                </button>
+                </ActionButton>
               </div>
-              <button
-                type="submit"
-                className="rounded-full bg-primary px-4 py-2.5 text-sm text-primary-fg"
-              >
+              <ActionButton type="submit" variant="primary" size="lg">
                 Sign in
-              </button>
+              </ActionButton>
             </form>
           )}
-          <p className="text-sm text-muted md:hidden">
-            New here?{" "}
-            <button
-              type="button"
-              className="text-primary"
-              onClick={() => setPanel("up")}
-            >
-              Create an account
-            </button>
-          </p>
         </section>
 
-        <section className="grid content-center gap-5 border-t border-border p-6 md:border-l md:border-t-0 md:p-10">
-          <div>
-            <p className="text-sm text-muted">Join Health Trust</p>
-            <h2 className="mt-1 text-3xl">Create account</h2>
-            <p className="mt-2 text-sm text-muted">
-              Signup opens a wallet, a unique funding account number, and a
-              member folder at Eastern Ryse.
-            </p>
-          </div>
+        <section className="form-panel sign-up-panel overflow-y-auto">
           <form className="grid gap-3" onSubmit={signUp}>
-            <label className="grid gap-1.5 text-sm">
-              Full name
+            <p className="text-sm text-muted">Join the hospital membership</p>
+            <h2 className="text-3xl">Create account</h2>
+            <GoogleButton
+              label="Sign up with Google"
+              onClick={() => google("up")}
+            />
+            <p className="text-center text-[11px] uppercase tracking-[0.18em] text-muted">
+              or email
+            </p>
+            <div className="field-group">
               <input
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 autoComplete="name"
-                className="rounded-xl border border-border bg-bg px-3 py-2.5"
               />
-            </label>
-            <label className="grid gap-1.5 text-sm">
-              Phone
+              <span className="field-notch">Full name</span>
+            </div>
+            <div className="field-group">
               <input
                 required
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 autoComplete="tel"
                 inputMode="tel"
-                className="rounded-xl border border-border bg-bg px-3 py-2.5"
               />
-            </label>
-            <label className="grid gap-1.5 text-sm">
-              Email
+              <span className="field-notch">Phone</span>
+            </div>
+            <div className="field-group">
               <input
                 type="email"
                 required
                 value={upEmail}
-                onChange={(e) => setUpEmail(e.target.value)}
+                onChange={(e) => {
+                  setUpEmail(e.target.value);
+                  setEmailVerified(false);
+                }}
                 autoComplete="email"
-                className="rounded-xl border border-border bg-bg px-3 py-2.5"
+                className={emailVerified ? "border-[var(--ok)]" : ""}
               />
-            </label>
+              <span className="field-notch">Email</span>
+            </div>
+            {emailVerified ? (
+              <p className="text-xs font-medium text-ok">Email verified</p>
+            ) : (
+              <ActionButton
+                variant="secondary"
+                size="sm"
+                onClick={async () => {
+                  const msg = await sendCode();
+                  if (msg !== null && upEmail.includes("@")) setOtpOpen(true);
+                }}
+              >
+                Send verification code
+              </ActionButton>
+            )}
             <PasswordField
               id="signup-password"
               label="Password"
@@ -270,21 +342,28 @@ export function AuthSlider() {
               onChange={setUpPassword}
               autoComplete="new-password"
             />
-            <label className="flex items-start gap-2 text-sm text-muted">
+            <PasswordField
+              id="confirm-password"
+              label="Confirm password"
+              value={confirm}
+              onChange={setConfirm}
+              autoComplete="new-password"
+              matchClass={confirmClass}
+            />
+            <label className="flex items-start gap-2 text-xs text-muted">
               <input
                 type="checkbox"
-                className="mt-1 size-4"
+                className="mt-0.5 size-4"
                 checked={ageOk}
                 onChange={(e) => setAgeOk(e.target.checked)}
                 required
               />
-              I am 18 or older, or I have a parent or guardian creating this
-              account with me.
+              I am 18 or older, or a parent is creating this with me.
             </label>
-            <label className="flex items-start gap-2 text-sm text-muted">
+            <label className="flex items-start gap-2 text-xs text-muted">
               <input
                 type="checkbox"
-                className="mt-1 size-4"
+                className="mt-0.5 size-4"
                 checked={termsOk}
                 onChange={(e) => setTermsOk(e.target.checked)}
                 required
@@ -299,76 +378,76 @@ export function AuthSlider() {
               </NavLink>
               .
             </label>
-            <button
-              type="submit"
-              className="rounded-full bg-primary px-4 py-2.5 text-sm text-primary-fg"
-            >
+            <ActionButton type="submit" variant="primary" size="lg">
               Create account
-            </button>
+            </ActionButton>
           </form>
-          <p className="text-sm text-muted md:hidden">
-            Already a member?{" "}
-            <button
-              type="button"
-              className="text-primary"
-              onClick={() => setPanel("in")}
-            >
-              Sign in
-            </button>
-          </p>
         </section>
 
-        <div
-          className={`slider-panel absolute inset-y-0 z-20 hidden w-1/2 bg-primary text-primary-fg md:grid ${
-            showSignUp ? "translate-x-0" : "translate-x-full"
-          }`}
-        >
-          <div className="grid place-content-center gap-4 p-10 text-center">
-            {showSignUp ? (
-              <>
-                <h2 className="text-3xl">Already a member?</h2>
-                <p className="text-sm opacity-90">
-                  Sign in to fund your wallet, book, and share Care Quota
-                  codes.
-                </p>
-                <button
-                  type="button"
-                  className="mx-auto rounded-full border border-primary-fg/40 px-5 py-2.5 text-sm"
-                  onClick={() => setPanel("in")}
-                >
-                  Sign in instead
-                </button>
-              </>
-            ) : (
-              <>
-                <h2 className="text-3xl">New here?</h2>
-                <p className="text-sm opacity-90">
-                  Membership turns you into a Health Trust VIP patient at
-                  Eastern Ryse. Create an account in a minute.
-                </p>
-                <button
-                  type="button"
-                  className="mx-auto rounded-full border border-primary-fg/40 px-5 py-2.5 text-sm"
-                  onClick={() => setPanel("up")}
-                >
-                  Create an account
-                </button>
-              </>
-            )}
+        <div className="overlay-wrapper">
+          <div className="overlay-content">
+            <div
+              className="overlay-box overlay-left-box bg-cover bg-center"
+              style={{
+                backgroundImage:
+                  "linear-gradient(180deg, rgba(110,83,48,0.82), rgba(110,83,48,0.88)), url(/medical/lobby.jpg)",
+              }}
+            >
+              <p className="text-xs tracking-[0.22em] uppercase opacity-80">
+                Returning patient
+              </p>
+              <h2 className="mt-2 text-3xl">Already with us?</h2>
+              <p className="mt-3 max-w-xs text-sm opacity-90">
+                Sign in to fund Health, book a consult, and pick up from the dispensary.
+              </p>
+              <ActionButton
+                variant="overlay"
+                className="mt-6"
+                onClick={() => setPanel("in")}
+                feedback="Opening sign in"
+              >
+                Sign in
+              </ActionButton>
+            </div>
+            <div
+              className="overlay-box overlay-right-box bg-cover bg-center"
+              style={{
+                backgroundImage:
+                  "linear-gradient(180deg, rgba(110,83,48,0.82), rgba(110,83,48,0.88)), url(/medical/pharmacy.jpg)",
+              }}
+            >
+              <p className="text-xs tracking-[0.22em] uppercase opacity-80">
+                New patient
+              </p>
+              <h2 className="mt-2 text-3xl">First visit?</h2>
+              <p className="mt-3 max-w-xs text-sm opacity-90">
+                Open a wallet, pick a Care Quota, and walk into Eastern Ryse already known.
+              </p>
+              <ActionButton
+                variant="overlay"
+                className="mt-6"
+                onClick={() => setPanel("up")}
+                feedback="Opening create account"
+              >
+                Create account
+              </ActionButton>
+            </div>
           </div>
         </div>
       </div>
 
-      {error ? (
-        <p className="border-t border-danger/30 bg-danger/10 px-6 py-3 text-sm text-danger">
-          {error}
-        </p>
-      ) : null}
-      {info ? (
-        <p className="border-t border-border px-6 py-3 text-sm text-muted">
-          {info}
-        </p>
-      ) : null}
-    </div>
+      <OtpModal
+        email={upEmail}
+        open={otpOpen}
+        onClose={() => setOtpOpen(false)}
+        onVerified={() => {
+          setEmailVerified(true);
+          setOtpOpen(false);
+          toast("Email verified");
+        }}
+        sendCode={sendCode}
+        verifyCode={verifyCode}
+      />
+    </>
   );
 }

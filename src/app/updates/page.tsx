@@ -4,7 +4,7 @@ export const metadata = { title: "Updates" };
 
 const POSTS = [
   {
-    title: "Health Trust opens membership",
+    title: "Sure Health opens membership",
     kind: "Hospital",
     excerpt:
       "Base, Plus, and Prime are live as a skeleton. Hospital copy, FarmGreat partnership notes, and the official logo follow in the next content pack.",

@@ -1,6 +1,11 @@
+import Image from "next/image";
 import {
   ArrowRight,
+  BookOpen,
   HeartPulse,
+  MessageCircle,
+  Phone,
+  Pill,
   Shield,
   Stethoscope,
   Users,
@@ -11,44 +16,51 @@ import { PublicShell } from "@/components/public-shell";
 import { HOSPITAL, TIERS } from "@/lib/constants";
 import { formatPrice } from "@/lib/utils";
 
-const FEATURES = [
+const UTILITIES = [
   {
     icon: HeartPulse,
     title: "Care Quota",
-    body: "A percentage of consultation and diagnosis the consultant confirms on site. It refreshes every three months for the life of your plan. You always know what is covered before you walk in.",
+    body: "Consultation and diagnosis sit inside a percentage the consultant confirms on site. It refreshes every three months while your plan is alive.",
+  },
+  {
+    icon: Stethoscope,
+    title: "Book a visit",
+    body: "Physical slots are time-priced in Health. Longer consults cost more. Prime is seen first at reception.",
+  },
+  {
+    icon: Phone,
+    title: "Audio consult",
+    body: "Call the clinician inside the product. Pick 25 or 60 minutes, pay from the wallet, and skip WhatsApp hops.",
+  },
+  {
+    icon: Pill,
+    title: "Pharmacy and drugs",
+    body: "Order from the industrial pharmacy and the dispensary. Pay with Health. Drugs sit outside Care Quota unless a clinician writes otherwise.",
   },
   {
     icon: Shield,
-    title: "Priority by tier",
-    body: "Prime is seen first, then Plus, then Base. Shared codes carry the generator's queue standing, so family using your cover is treated with your rank.",
+    title: "Digital appointment card",
+    body: "Skip the card queue. A normal card holds your place. A VIP card is for immediate consultation.",
+  },
+  {
+    icon: Wallet,
+    title: "Health wallet",
+    body: "Every account gets a wallet and a permanent account number. 1 Health equals 100 naira. Cashback lands here. Withdraw to a Nigerian bank.",
   },
   {
     icon: Users,
     title: "Share cover",
-    body: "Issue a Care Quota code from your dashboard. A friend or family member presents it at Eastern Ryse and draws from the percent you allocated.",
-  },
-];
-
-const STEPS = [
-  {
-    n: "01",
-    t: "Create an account",
-    d: "Email, phone, and a password. A wallet and a unique funding account number are created with you.",
+    body: "Issue a Care Quota code so family can walk into Eastern Ryse on your standing. You cannot allocate more than you have left.",
   },
   {
-    n: "02",
-    t: "Fund Health",
-    d: "1 Health equals 100 naira. Pay into your permanent account number. Then pay for membership, cards, calls, and drugs from the wallet.",
+    icon: BookOpen,
+    title: "Updates and education",
+    body: "Hospital notes, case explainers, and public health posts. Factual, dated, no invented reviews.",
   },
   {
-    n: "03",
-    t: "Pick a tier",
-    d: "Base, Plus, or Prime. Each one sets your Care Quota, your queue standing, and how long the plan runs.",
-  },
-  {
-    n: "04",
-    t: "Use care",
-    d: "Book a physical visit, buy a digital card, or schedule an in-app audio call. Present your code or your membership at the desk.",
+    icon: MessageCircle,
+    title: "Enquiries",
+    body: "Ask the desk a question or report a non-emergency medical case. Emergencies still go to local services first.",
   },
 ];
 
@@ -56,119 +68,158 @@ export default function HomePage() {
   return (
     <PublicShell>
       <main>
-        <section className="mx-auto max-w-6xl px-4 py-16 md:py-24">
-          <p className="rise text-sm font-medium tracking-wide text-primary">
-            {HOSPITAL.sponsor} · {HOSPITAL.name}
-          </p>
-          <h1 className="rise-2 mt-4 max-w-3xl text-4xl leading-[1.1] md:text-6xl">
-            Health is not a luxury. Care should reach you before the bill does.
-          </h1>
-          <p className="rise-3 mt-5 max-w-2xl text-lg leading-relaxed text-muted">
-            Register and you become a Health Trust VIP patient. Consultation
-            and diagnosis sit inside your Care Quota. Referrals pay you back
-            in Health. The aim is simple: healthier lives, and wealthier ones
-            too.
-          </p>
-          <div className="rise-4 mt-8 flex flex-wrap gap-3">
-            <NavLink
-              href="/tiers"
-              className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm text-primary-fg"
-            >
-              Become a member <ArrowRight className="size-4" />
-            </NavLink>
-            <NavLink
-              href="/how-it-works"
-              className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-3 text-sm"
-            >
-              See how Care Quota works
-            </NavLink>
-          </div>
-        </section>
-
-        <section className="border-y border-border bg-card">
-          <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 md:grid-cols-3">
-            {FEATURES.map((item) => (
-              <article key={item.title} className="grid gap-3">
-                <item.icon className="size-6 text-primary" aria-hidden />
-                <h2 className="text-2xl">{item.title}</h2>
-                <p className="text-sm leading-relaxed text-muted">{item.body}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="mx-auto max-w-6xl px-4 py-16">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-sm text-primary">Membership</p>
-              <h2 className="mt-1 text-3xl md:text-4xl">Three ways in</h2>
-            </div>
-            <NavLink href="/tiers" className="text-sm text-primary">
-              Compare tiers in full
-            </NavLink>
-          </div>
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
-            {Object.values(TIERS).map((t) => (
-              <article
-                key={t.id}
-                className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6"
+        <section className="relative overflow-hidden">
+          <Image
+            src="/medical/lobby.jpg"
+            alt="Eastern Ryse hospital lobby in warm morning light"
+            fill
+            priority
+            className="object-cover"
+          />
+          <div className="absolute inset-0 bg-[color-mix(in_srgb,var(--bg)_78%,transparent)]" />
+          <div className="relative mx-auto max-w-6xl px-4 py-20 md:py-28">
+            <p className="rise text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+              Why we are here
+            </p>
+            <h1 className="rise-2 mt-4 max-w-3xl text-4xl leading-[1.12] md:text-6xl">
+              Treatment should reach you before the bill does.
+            </h1>
+            <p className="rise-3 mt-5 max-w-2xl text-lg leading-relaxed text-muted">
+              {HOSPITAL.program} sits on {HOSPITAL.name}. We built a membership
+              so consultation is not a luxury product, so a family can walk in
+              already known, and so a healthier life can also be a wealthier one.
+              Sponsored by {HOSPITAL.sponsor}.
+            </p>
+            <div className="rise-4 mt-8 flex flex-wrap gap-3">
+              <NavLink
+                href="/login"
+                className="btn-press inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-[0.95rem] font-semibold text-primary-fg"
               >
-                <p className="text-sm text-muted">{t.short}</p>
-                <h3 className="text-2xl">{t.name}</h3>
-                <p className="text-lg tabular-nums">{formatPrice(t.priceHealth)}</p>
-                <p className="text-sm text-muted">
-                  {t.durationMonths} months of Care Quota. Refreshes every 3
-                  months ({t.refreshes} auto-renewals).
+                Open an account <ArrowRight className="size-4" />
+              </NavLink>
+              <NavLink
+                href="/how-it-works"
+                className="btn-press inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-6 py-3 text-sm"
+              >
+                Read the Care Quota
+              </NavLink>
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-6xl px-4 py-16 md:py-20">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+            What you can do here
+          </p>
+          <h2 className="mt-2 max-w-2xl text-3xl md:text-4xl">
+            A hospital desk in your pocket, not only a price list
+          </h2>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted">
+            Care Quota is the flagship. Around it sit the daily tools: booking,
+            pharmacy, cards, calls, wallet, family codes, and hospital updates.
+          </p>
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {UTILITIES.map((item) => (
+              <article
+                key={item.title}
+                className="rounded-2xl border border-border bg-card p-5"
+              >
+                <item.icon className="size-5 text-primary" aria-hidden />
+                <h3 className="mt-3 text-xl">{item.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted">
+                  {item.body}
                 </p>
-                <p className="text-sm">{t.quotaHint}</p>
-                <NavLink
-                  href="/login"
-                  className="mt-auto inline-flex rounded-full bg-primary px-4 py-2 text-center text-sm text-primary-fg"
-                >
-                  Start with {t.short}
-                </NavLink>
               </article>
             ))}
           </div>
         </section>
 
         <section className="border-y border-border bg-card">
+          <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-16 md:grid-cols-2">
+            <div className="relative aspect-[4/3] overflow-hidden rounded-2xl">
+              <Image
+                src="/medical/still-life.jpg"
+                alt="Stethoscope and medicine bottles on cream linen"
+                fill
+                className="object-cover"
+              />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+                Care Quota
+              </p>
+              <h2 className="mt-2 text-3xl md:text-4xl">
+                Cover for the consult, not a blank cheque
+              </h2>
+              <p className="mt-4 text-sm leading-relaxed text-muted">
+                The clinician confirms the percentage on site. Surgery, boarding,
+                and dispensary drugs sit outside unless written into your folder.
+                Share a code and family is treated with your queue standing.
+              </p>
+              <NavLink
+                href="/how-it-works"
+                className="btn-press mt-6 inline-flex rounded-full border border-border px-5 py-2.5 text-sm"
+              >
+                How quota works
+              </NavLink>
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-16 md:grid-cols-2">
+          <div className="order-2 md:order-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+              Campus
+            </p>
+            <h2 className="mt-2 text-3xl">Clinical, surgery, pharmacy, dispensary</h2>
+            <p className="mt-4 text-sm leading-relaxed text-muted">
+              Eastern Ryse is a physical medical ecosystem. Sure Health is the
+              membership layer on top, so people arrive with cover and a wallet
+              already in their name.
+            </p>
+          </div>
+          <div className="relative order-1 aspect-[16/10] overflow-hidden rounded-2xl md:order-2">
+            <Image
+              src="/medical/corridor.jpg"
+              alt="Quiet hospital corridor with cream walls"
+              fill
+              className="object-cover"
+            />
+          </div>
+        </section>
+
+        <section className="border-t border-border">
           <div className="mx-auto max-w-6xl px-4 py-16">
-            <h2 className="text-3xl md:text-4xl">How a visit actually works</h2>
-            <div className="mt-8 grid gap-6 md:grid-cols-4">
-              {STEPS.map((s) => (
-                <article key={s.n} className="grid gap-2">
-                  <p className="text-xs tracking-[0.2em] text-primary">{s.n}</p>
-                  <h3 className="text-xl">{s.t}</h3>
-                  <p className="text-sm leading-relaxed text-muted">{s.d}</p>
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+                  Membership
+                </p>
+                <h2 className="mt-2 text-3xl">Base, Plus, Prime</h2>
+                <p className="mt-2 max-w-xl text-sm text-muted">
+                  Standing and duration change with the tier. Full prices live on
+                  the tiers page. Nothing extra is added at checkout.
+                </p>
+              </div>
+              <NavLink href="/tiers" className="text-sm font-semibold text-primary">
+                Compare in full
+              </NavLink>
+            </div>
+            <div className="mt-8 grid gap-3 md:grid-cols-3">
+              {Object.values(TIERS).map((t) => (
+                <article
+                  key={t.id}
+                  className="rounded-2xl border border-border bg-card p-5"
+                >
+                  <p className="text-sm text-muted">{t.short}</p>
+                  <h3 className="mt-1 text-xl">{t.name}</h3>
+                  <p className="mt-2 text-sm tabular-nums">
+                    {formatPrice(t.priceHealth)} · {t.durationMonths} months
+                  </p>
                 </article>
               ))}
             </div>
           </div>
-        </section>
-
-        <section className="mx-auto grid max-w-6xl gap-6 px-4 py-16 md:grid-cols-2">
-          <article className="rounded-2xl border border-border bg-card p-6">
-            <Wallet className="size-6 text-primary" aria-hidden />
-            <h2 className="mt-4 text-2xl">The Health wallet</h2>
-            <p className="mt-3 text-sm leading-relaxed text-muted">
-              Every account gets a wallet and a permanent account number you
-              can pay into. Spend Health on membership, digital cards, audio
-              calls, physical bookings, and dispensary items. Referral
-              cashback lands in the same wallet. Withdraw Health to a local
-              Nigerian bank when you need the naira back.
-            </p>
-          </article>
-          <article className="rounded-2xl border border-border bg-card p-6">
-            <Stethoscope className="size-6 text-primary" aria-hidden />
-            <h2 className="mt-4 text-2xl">A full medical campus</h2>
-            <p className="mt-3 text-sm leading-relaxed text-muted">
-              Eastern Ryse is a physical ecosystem: clinical hospital, surgery
-              sector, industrial pharmacy, and drug dispensary. Health Trust
-              is the membership layer on top of that campus, so people can
-              walk in with cover already sitting in their name.
-            </p>
-          </article>
         </section>
 
         <section className="border-t border-border bg-primary px-4 py-14 text-primary-fg">
@@ -176,14 +227,12 @@ export default function HomePage() {
             <div>
               <h2 className="text-3xl">Ready when you are</h2>
               <p className="mt-2 max-w-xl text-sm opacity-90">
-                Create an account, fund Health, pick a tier. No hidden
-                add-ons at checkout. Prices you see in Health are the prices
-                you pay.
+                Create an account, fund Health, use the desk. No hidden add-ons.
               </p>
             </div>
             <NavLink
               href="/login"
-              className="inline-flex rounded-full bg-primary-fg px-5 py-3 text-sm text-primary"
+              className="btn-press inline-flex rounded-full bg-primary-fg px-6 py-3 text-sm font-semibold text-primary"
             >
               Open your account
             </NavLink>

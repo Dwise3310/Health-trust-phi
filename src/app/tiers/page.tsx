@@ -13,7 +13,7 @@ export default function TiersPage() {
       <main className="mx-auto max-w-6xl px-4 py-16">
         <p className="text-sm text-primary">Membership</p>
         <h1 className="mt-2 max-w-3xl text-4xl md:text-5xl">
-          Health Trust Base, Plus, and Prime
+          Sure Health Base, Plus, and Prime
         </h1>
         <p className="mt-4 max-w-2xl text-lg text-muted">
           Pick the standing you want at Eastern Ryse. Higher tiers cost more

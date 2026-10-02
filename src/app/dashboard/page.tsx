@@ -7,7 +7,7 @@ export default function DashboardHome() {
     <main className="mx-auto grid max-w-4xl gap-6">
       <div>
         <p className="text-sm text-primary">Member home</p>
-        <h1 className="mt-1 text-3xl">Your Health Trust</h1>
+        <h1 className="mt-1 text-3xl">Your Sure Health</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted">
           This is the working desk. Fund the wallet, buy a tier, issue a
           Care Quota code, book a visit or an audio call, and keep a

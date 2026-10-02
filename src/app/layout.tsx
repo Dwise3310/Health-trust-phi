@@ -3,6 +3,7 @@ import { Fraunces, Outfit } from "next/font/google";
 import { CookieBanner } from "@/components/cookie-banner";
 import { LoadingProvider } from "@/components/loading-provider";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ToastProvider } from "@/components/toast";
 import { HOSPITAL } from "@/lib/constants";
 import "./globals.css";
 
@@ -24,7 +25,7 @@ export const metadata: Metadata = {
     template: `%s · ${HOSPITAL.program}`,
   },
   description:
-    "Health Trust membership at Eastern Ryse Specialist Hospital. Care Quota cover, a Health wallet, digital cards, and referral cashback. Sponsored by FarmGreat West Africa LLC.",
+    "Sure Health membership at Eastern Ryse Specialist Hospital. Care Quota cover, a Health wallet, digital cards, and referral cashback. Sponsored by FarmGreat West Africa LLC.",
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL || "https://health-trust-phi.vercel.app",
   ),
@@ -43,10 +44,12 @@ export default function RootLayout({
       </head>
       <body className={`${outfit.variable} ${fraunces.variable} antialiased`}>
         <ThemeProvider>
-          <LoadingProvider>
-            {children}
-            <CookieBanner />
-          </LoadingProvider>
+          <ToastProvider>
+            <LoadingProvider>
+              {children}
+              <CookieBanner />
+            </LoadingProvider>
+          </ToastProvider>
         </ThemeProvider>
       </body>
     </html>
