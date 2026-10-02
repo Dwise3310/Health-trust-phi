@@ -32,4 +32,4 @@ If you already ran an earlier schema, run the file again. Table creates are `if 
 
 Email confirmation can stay on. Sign up asks people to verify their email before the account is created.
 
-Vercel should detect Next.js automatically.
+Vercel should detect Next.js automatically. Hobby deploys must come from the GitHub owner of this repo.
