@@ -24,9 +24,7 @@ export default function ContactPage() {
     const supabase = createClient();
     if (!supabase) {
       stop();
-      setStatus(
-        "Message stored locally for now. Connect Supabase to deliver enquiries to the hospital desk.",
-      );
+      setStatus("Could not send that just now. Try again in a moment.");
       return;
     }
     const { error } = await supabase.from("enquiries").insert({

@@ -73,7 +73,7 @@ export default function AppointmentsPage() {
     const supabase = createClient();
     const price = prices.find((p) => String(p.minutes) === slot);
     if (!supabase || !uid || !price) {
-      toast("Connect Supabase to book.");
+      toast("Could not book right now. Try again.");
       return;
     }
     const { error } = await supabase.from("appointments").insert({
@@ -98,7 +98,7 @@ export default function AppointmentsPage() {
     const supabase = createClient();
     const cost = type === "vip" ? VIP_CARD_PRICE_HEALTH : CARD_PRICE_HEALTH;
     if (!supabase || !uid) {
-      toast("Connect Supabase to issue a card.");
+      toast("Could not issue a card right now. Try again.");
       return;
     }
     const { error } = await supabase.from("appointment_cards").insert({

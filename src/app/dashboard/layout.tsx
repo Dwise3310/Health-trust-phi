@@ -26,7 +26,7 @@ export default function DashboardLayout({
   useEffect(() => {
     const supabase = createClient();
     if (!supabase) {
-      setReady(true);
+      router.replace("/login?next=/dashboard");
       return;
     }
 

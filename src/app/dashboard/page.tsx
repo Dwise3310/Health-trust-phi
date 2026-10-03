@@ -137,7 +137,7 @@ export default function OverviewPage() {
     e.preventDefault();
     const supabase = createClient();
     if (!supabase || !uid) {
-      toast("Connect Supabase first, then save again.");
+      toast("Could not save the file right now. Try again.");
       return;
     }
     const username = form.username.trim().toLowerCase();

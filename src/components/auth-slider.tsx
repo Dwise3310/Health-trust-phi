@@ -146,7 +146,7 @@ export function AuthSlider() {
     start("Creating your Sure Health");
     if (!supabase) {
       stop();
-      toast("Account form is ready. Connect Supabase to actually create members.");
+      toast("Could not create the account right now. Try again in a moment.");
       return;
     }
     const origin = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;

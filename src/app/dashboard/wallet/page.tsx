@@ -17,7 +17,7 @@ export default function WalletPage() {
   const { toast } = useToast();
   const [uid, setUid] = useState<string | null>(null);
   const [balance, setBalance] = useState(0);
-  const [account, setAccount] = useState("Waiting for SQL");
+  const [account, setAccount] = useState("");
   const [quota, setQuota] = useState(100);
   const [codes, setCodes] = useState<Code[]>([]);
   const [tx, setTx] = useState<Tx[]>([]);
@@ -99,7 +99,7 @@ export default function WalletPage() {
   async function credit(amount: number) {
     const supabase = createClient();
     if (!supabase || !uid) {
-      toast("Connect Supabase to credit the wallet.");
+      toast("Could not reach your wallet. Try again in a moment.");
       return;
     }
     const next = balance + amount;
@@ -127,7 +127,7 @@ export default function WalletPage() {
     const supabase = createClient();
     const slice = Number(percent);
     if (!supabase || !uid) {
-      toast("Connect Supabase to issue a code.");
+      toast("Could not issue a code right now. Try again.");
       return;
     }
     if (slice > quota) {
@@ -231,10 +231,12 @@ export default function WalletPage() {
 
       <section className="rounded-2xl border border-border bg-card p-5">
         <h2 className="text-xl">Funding account</h2>
-        <p className="mt-2 font-mono text-lg tracking-wide">{account}</p>
+        <p className="mt-2 font-mono text-lg tracking-wide">
+          {account || "Preparing your account number"}
+        </p>
         <p className="mt-2 text-sm text-muted">
-          Permanent. Pay into this number from any Nigerian bank. Test credits
-          below stay until the bank rail is live.
+          This number is yours for life. Pay into it from any Nigerian bank.
+          1 Health is ₦100. Incoming naira lands as Health in this wallet.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           {[50, 100, 250].map((n) => (

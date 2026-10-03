@@ -10,7 +10,7 @@ const ORDER: TierId[] = ["base", "plus", "prime"];
 
 export default function ReferralDashPage() {
   const { toast } = useToast();
-  const [code, setCode] = useState("Waiting for SQL");
+  const [code, setCode] = useState("");
 
   useEffect(() => {
     const supabase = createClient();
@@ -50,7 +50,9 @@ export default function ReferralDashPage() {
 
       <section className="rounded-2xl border border-border bg-card p-5">
         <p className="text-sm text-muted">Your code</p>
-        <p className="mt-2 font-mono text-2xl tracking-wide">{code}</p>
+        <p className="mt-2 font-mono text-2xl tracking-wide">
+          {code || "Preparing your code"}
+        </p>
         <ActionButton className="mt-4" variant="primary" onClick={copy}>
           Copy code
         </ActionButton>

@@ -29,7 +29,7 @@ export default function MissionsPage() {
   async function claim(id: string, reward: number) {
     const supabase = createClient();
     if (!supabase || !uid) {
-      toast("Connect Supabase, then claim again.");
+      toast("Could not claim that right now. Try again.");
       return;
     }
     if (done.includes(id)) return;

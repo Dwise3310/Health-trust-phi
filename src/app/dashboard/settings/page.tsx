@@ -43,7 +43,7 @@ export default function SettingsPage() {
     const supabase = createClient();
     const value = username.trim().toLowerCase();
     if (!supabase || !uid) {
-      toast("Connect Supabase first.");
+      toast("Could not save right now. Try again.");
       return;
     }
     if (value.length < 3) {
