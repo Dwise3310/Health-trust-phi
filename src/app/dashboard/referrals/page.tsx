@@ -1,17 +1,61 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { ActionButton } from "@/components/action-button";
+import { useToast } from "@/components/toast";
 import { REFERRAL_PERCENT, TIERS, type TierId } from "@/lib/constants";
+import { createClient } from "@/lib/supabase/client";
 
 const ORDER: TierId[] = ["base", "plus", "prime"];
 
 export default function ReferralDashPage() {
+  const { toast } = useToast();
+  const [code, setCode] = useState("Waiting for SQL");
+
+  useEffect(() => {
+    const supabase = createClient();
+    if (!supabase) return;
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) return;
+      const { data: row } = await supabase
+        .from("profiles")
+        .select("referral_code")
+        .eq("id", data.user.id)
+        .maybeSingle();
+      if (row?.referral_code) setCode(row.referral_code);
+    });
+  }, []);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(code);
+      toast("Referral code copied");
+    } catch {
+      toast(code);
+    }
+  }
+
   return (
-    <main className="mx-auto grid max-w-3xl gap-6">
+    <main className="grid gap-5">
       <div>
-        <h1 className="text-3xl">Your referrals</h1>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+          Referrals
+        </p>
+        <h1 className="mt-1 text-3xl">Bring family, earn Health</h1>
         <p className="mt-2 text-sm text-muted">
-          Share your code. When the person buys a tier, cashback lands in
-          Health according to the matrix. Ceiling is 15 percent.
+          Share your code. When they buy a tier, cashback lands in Health.
+          Ceiling is 15 percent, Prime to Prime.
         </p>
       </div>
+
+      <section className="rounded-2xl border border-border bg-card p-5">
+        <p className="text-sm text-muted">Your code</p>
+        <p className="mt-2 font-mono text-2xl tracking-wide">{code}</p>
+        <ActionButton className="mt-4" variant="primary" onClick={copy}>
+          Copy code
+        </ActionButton>
+      </section>
+
       <div className="overflow-x-auto rounded-2xl border border-border">
         <table className="w-full min-w-[480px] text-left text-sm">
           <thead className="bg-card">

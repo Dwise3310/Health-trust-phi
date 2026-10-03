@@ -1,46 +1,139 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-import { useLoading } from "@/components/loading-provider";
-import { CALL_PRICES, PHYSICAL_PRICES } from "@/lib/constants";
+import { FormEvent, useEffect, useState } from "react";
+import { ActionButton } from "@/components/action-button";
+import { useToast } from "@/components/toast";
+import {
+  CALL_PRICES,
+  CARD_PRICE_HEALTH,
+  PHYSICAL_PRICES,
+  VIP_CARD_PRICE_HEALTH,
+} from "@/lib/constants";
 import { formatPrice } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
+
+type Booking = {
+  id: number;
+  kind: string;
+  duration_min: number;
+  scheduled_at: string;
+  health_cost: number;
+  status: string;
+};
+
+type Card = {
+  id: number;
+  card_type: string;
+  health_cost: number;
+  status: string;
+  created_at: string;
+};
 
 export default function AppointmentsPage() {
-  const { start, stop } = useLoading();
+  const { toast } = useToast();
+  const [uid, setUid] = useState<string | null>(null);
   const [kind, setKind] = useState<"physical" | "audio">("physical");
   const [slot, setSlot] = useState("30");
   const [when, setWhen] = useState("");
   const [note, setNote] = useState("");
-  const [done, setDone] = useState<string | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [cards, setCards] = useState<Card[]>([]);
 
   const prices = kind === "audio" ? CALL_PRICES : PHYSICAL_PRICES;
 
-  function onSubmit(e: FormEvent) {
+  async function load(userId: string) {
+    const supabase = createClient();
+    if (!supabase) return;
+    const { data: a } = await supabase
+      .from("appointments")
+      .select("id, kind, duration_min, scheduled_at, health_cost, status")
+      .eq("user_id", userId)
+      .order("scheduled_at", { ascending: false });
+    setBookings((a as Booking[]) || []);
+    const { data: c } = await supabase
+      .from("appointment_cards")
+      .select("id, card_type, health_cost, status, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+    setCards((c as Card[]) || []);
+  }
+
+  useEffect(() => {
+    const supabase = createClient();
+    if (!supabase) return;
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) return;
+      setUid(data.user.id);
+      void load(data.user.id);
+    });
+  }, []);
+
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    start("Booking");
+    const supabase = createClient();
     const price = prices.find((p) => String(p.minutes) === slot);
-    setDone(
-      `Booked a ${slot} minute ${kind} visit for ${formatPrice(price?.health ?? 0)}. A clinician will see it on the staff board.`,
-    );
-    stop();
+    if (!supabase || !uid || !price) {
+      toast("Connect Supabase to book.");
+      return;
+    }
+    const { error } = await supabase.from("appointments").insert({
+      user_id: uid,
+      kind,
+      duration_min: price.minutes,
+      scheduled_at: new Date(when).toISOString(),
+      health_cost: price.health,
+      notes: note,
+      status: "scheduled",
+    });
+    if (error) {
+      toast(error.message);
+      return;
+    }
+    toast("Visit filed on the clinician board");
+    setNote("");
+    void load(uid);
+  }
+
+  async function buy(type: "normal" | "vip") {
+    const supabase = createClient();
+    const cost = type === "vip" ? VIP_CARD_PRICE_HEALTH : CARD_PRICE_HEALTH;
+    if (!supabase || !uid) {
+      toast("Connect Supabase to issue a card.");
+      return;
+    }
+    const { error } = await supabase.from("appointment_cards").insert({
+      user_id: uid,
+      card_type: type,
+      health_cost: cost,
+      status: "active",
+    });
+    if (error) {
+      toast(error.message);
+      return;
+    }
+    toast(`${type === "vip" ? "VIP" : "Normal"} card issued`);
+    void load(uid);
   }
 
   return (
-    <main className="mx-auto grid max-w-3xl gap-6">
+    <main className="grid gap-5">
       <div>
-        <h1 className="text-3xl">Appointments</h1>
-        <p className="mt-2 text-sm text-muted">
-          Physical bookings are time-priced. Audio calls run inside this
-          product over the internet, no WhatsApp hop. Prime members are
-          called first if two bookings collide.
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+          Visit
+        </p>
+        <h1 className="mt-1 text-3xl">Book a consult</h1>
+        <p className="mt-2 text-sm leading-relaxed text-muted">
+          Physical time is priced by the minute. Audio calls stay inside this
+          app. Prime members are called first if two bookings collide.
         </p>
       </div>
+
       <form
         onSubmit={onSubmit}
-        className="grid gap-3 rounded-2xl border border-border bg-card p-6"
+        className="grid gap-3 rounded-2xl border border-border bg-card p-5"
       >
         <fieldset className="grid gap-2 text-sm">
-          <legend>Type</legend>
+          <legend className="font-semibold">Type</legend>
           <label className="flex items-center gap-2">
             <input
               type="radio"
@@ -99,14 +192,80 @@ export default function AppointmentsPage() {
             className="rounded-xl border border-border bg-bg px-3 py-2.5"
           />
         </label>
-        <button
-          type="submit"
-          className="rounded-full bg-primary px-4 py-2.5 text-sm text-primary-fg"
-        >
+        <ActionButton type="submit" variant="primary">
           Confirm booking
-        </button>
-        {done ? <p className="text-sm text-muted">{done}</p> : null}
+        </ActionButton>
       </form>
+
+      <section className="rounded-2xl border border-border bg-card p-5">
+        <h2 className="text-xl">Upcoming</h2>
+        <ul className="mt-3 grid gap-2">
+          {bookings.length === 0 ? (
+            <li className="text-sm text-muted">No visit on the board yet.</li>
+          ) : (
+            bookings.map((b) => (
+              <li
+                key={b.id}
+                className="rounded-xl border border-border px-4 py-3 text-sm"
+              >
+                <p className="font-semibold capitalize">
+                  {b.kind} · {b.duration_min} min
+                </p>
+                <p className="mt-1 text-muted">
+                  {new Date(b.scheduled_at).toLocaleString("en-NG")} ·{" "}
+                  {formatPrice(Number(b.health_cost))} · {b.status}
+                </p>
+              </li>
+            ))
+          )}
+        </ul>
+      </section>
+
+      <section className="rounded-2xl border border-border bg-card p-5">
+        <h2 className="text-xl">Digital appointment cards</h2>
+        <p className="mt-2 text-sm text-muted">
+          Skip the paper queue at reception. A normal card holds your place. A
+          VIP card is for immediate consultation. Prime still sits in the Prime
+          lounge on arrival.
+        </p>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <article className="rounded-xl border border-border p-4">
+            <h3 className="font-semibold">Normal card</h3>
+            <p className="mt-1 text-sm">{formatPrice(CARD_PRICE_HEALTH)}</p>
+            <ActionButton
+              className="mt-3"
+              variant="secondary"
+              onClick={() => buy("normal")}
+            >
+              Buy normal
+            </ActionButton>
+          </article>
+          <article className="rounded-xl border border-border p-4">
+            <h3 className="font-semibold">VIP card</h3>
+            <p className="mt-1 text-sm">{formatPrice(VIP_CARD_PRICE_HEALTH)}</p>
+            <ActionButton
+              className="mt-3"
+              variant="primary"
+              onClick={() => buy("vip")}
+            >
+              Buy VIP
+            </ActionButton>
+          </article>
+        </div>
+        <ul className="mt-4 grid gap-2">
+          {cards.map((c) => (
+            <li
+              key={c.id}
+              className="flex items-center justify-between rounded-xl border border-border px-4 py-3 text-sm"
+            >
+              <span className="font-mono uppercase">
+                {c.card_type}-{c.id}
+              </span>
+              <span className="text-muted">{c.status}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
     </main>
   );
 }

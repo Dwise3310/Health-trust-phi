@@ -1,0 +1,94 @@
+"use client";
+
+import {
+  CalendarDays,
+  Gift,
+  LayoutGrid,
+  Pill,
+  Settings,
+  UserRound,
+  Wallet,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
+
+const MAIN = [
+  { href: "/dashboard", label: "File", icon: UserRound },
+  { href: "/dashboard/wallet", label: "Wallet", icon: Wallet },
+];
+
+const MORE = [
+  { href: "/dashboard/referrals", label: "Referrals", icon: Gift },
+  { href: "/dashboard/missions", label: "Missions", icon: LayoutGrid },
+  { href: "/dashboard/settings", label: "Settings", icon: Settings },
+];
+
+export function DashDock() {
+  const path = usePathname();
+  const [more, setMore] = useState(false);
+  const onMore = MORE.some((i) => path.startsWith(i.href));
+
+  return (
+    <>
+      {more ? (
+        <div className="more-sheet" onClick={() => setMore(false)}>
+          <div className="more-panel" onClick={(e) => e.stopPropagation()}>
+            <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted">
+              More
+            </p>
+            {MORE.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMore(false)}
+                className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm ${
+                  path.startsWith(item.href) ? "bg-bg text-primary" : ""
+                }`}
+              >
+                <item.icon className="size-4" />
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <nav className="dash-dock" aria-label="Member desk">
+        {MAIN.map((item) => {
+          const on = path === item.href;
+          return (
+            <Link key={item.href} href={item.href} className={on ? "is-on" : ""}>
+              <item.icon className="size-5" />
+              {item.label}
+            </Link>
+          );
+        })}
+        <Link
+          href="/dashboard/products"
+          className={`dash-dock-center ${
+            path.startsWith("/dashboard/products") ? "is-on" : ""
+          }`}
+          aria-label="Pharmacy"
+        >
+          <Pill className="size-5" />
+        </Link>
+        <Link
+          href="/dashboard/appointments"
+          className={path.startsWith("/dashboard/appointments") ? "is-on" : ""}
+        >
+          <CalendarDays className="size-5" />
+          Visit
+        </Link>
+        <button
+          type="button"
+          className={`dock-item ${onMore || more ? "is-on" : ""}`}
+          onClick={() => setMore((v) => !v)}
+        >
+          <LayoutGrid className="size-5" />
+          More
+        </button>
+      </nav>
+    </>
+  );
+}

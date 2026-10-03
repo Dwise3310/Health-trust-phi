@@ -23,7 +23,7 @@ export function ActionButton({
 
   const look = {
     primary:
-      "bg-primary text-primary-fg shadow-[0_10px_24px_-12px_rgba(110,83,48,0.7)]",
+      "bg-primary text-primary-fg shadow-[0_10px_24px_-12px_color-mix(in_srgb,var(--primary)_70%,transparent)]",
     secondary: "border border-border bg-card text-fg",
     ghost: "text-primary",
     overlay:

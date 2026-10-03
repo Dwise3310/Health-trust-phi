@@ -118,9 +118,10 @@ export const NAV = [
 export const DASH_NAV = [
   { href: "/dashboard", label: "Overview" },
   { href: "/dashboard/wallet", label: "Wallet" },
-  { href: "/dashboard/codes", label: "Care codes" },
+  { href: "/dashboard/products", label: "Products" },
   { href: "/dashboard/appointments", label: "Appointments" },
-  { href: "/dashboard/cards", label: "Cards" },
   { href: "/dashboard/referrals", label: "Referrals" },
+  { href: "/dashboard/missions", label: "Missions" },
   { href: "/dashboard/settings", label: "Settings" },
 ];
+

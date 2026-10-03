@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { supabaseCookieOptions } from "@/lib/session";
 import { getSupabasePublicEnv } from "./env";
 
 export async function createClient() {
@@ -8,6 +9,7 @@ export async function createClient() {
   const cookieStore = await cookies();
 
   return createServerClient(env.url, env.anonKey, {
+    cookieOptions: supabaseCookieOptions,
     cookies: {
       getAll() {
         return cookieStore.getAll();
@@ -15,7 +17,7 @@ export async function createClient() {
       setAll(cookiesToSet) {
         try {
           cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options);
+            cookieStore.set(name, value, { ...options, ...supabaseCookieOptions });
           });
         } catch {
           // Called from a Server Component. Middleware already refreshed the session.

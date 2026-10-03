@@ -1,11 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { NavLink } from "@/components/nav-link";
+import { useEffect, useState } from "react";
+import { AccountMenu } from "@/components/account-menu";
+import { DashDock } from "@/components/dash-dock";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { DASH_NAV, HOSPITAL } from "@/lib/constants";
+import { HOSPITAL } from "@/lib/constants";
+import { SESSION_MAX_AGE } from "@/lib/session";
 import { createClient } from "@/lib/supabase/client";
+
+const SEEN_KEY = "sh-last-seen";
+
+type Mini = { name: string; avatar: string | null };
 
 export default function DashboardLayout({
   children,
@@ -13,69 +20,108 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const [email, setEmail] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+  const [mini, setMini] = useState<Mini>({ name: "Member", avatar: null });
 
   useEffect(() => {
     const supabase = createClient();
     if (!supabase) {
-      setEmail("preview@surehealth.ng");
+      setReady(true);
       return;
     }
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) {
+
+    let dead = false;
+    const client = supabase;
+
+    async function boot() {
+      const last = Number(localStorage.getItem(SEEN_KEY) || "0");
+      if (last && Date.now() - last > SESSION_MAX_AGE * 1000) {
+        await client.auth.signOut();
+        if (!dead) router.replace("/login?next=/dashboard");
+        return;
+      }
+      localStorage.setItem(SEEN_KEY, String(Date.now()));
+
+      const { data } = await client.auth.getSession();
+      if (dead) return;
+      if (!data.session) {
         router.replace("/login?next=/dashboard");
         return;
       }
-      setEmail(data.user.email ?? "member");
+      const uid = data.session.user.id;
+      const { data: profile } = await client
+        .from("profiles")
+        .select("full_name, username, avatar_url")
+        .eq("id", uid)
+        .maybeSingle();
+      if (!dead) {
+        setMini({
+          name: profile?.full_name || profile?.username || "Member",
+          avatar: profile?.avatar_url || null,
+        });
+        setReady(true);
+      }
+    }
+
+    const { data: sub } = client.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") router.replace("/login?next=/dashboard");
     });
+
+    const tick = setInterval(() => {
+      localStorage.setItem(SEEN_KEY, String(Date.now()));
+    }, 60_000);
+
+    boot();
+    return () => {
+      dead = true;
+      sub.subscription.unsubscribe();
+      clearInterval(tick);
+    };
   }, [router]);
 
   async function signOut() {
     const supabase = createClient();
     if (supabase) await supabase.auth.signOut();
+    localStorage.removeItem(SEEN_KEY);
     router.replace("/");
     router.refresh();
   }
 
+  if (!ready) {
+    return (
+      <div className="grid min-h-screen place-items-center text-sm text-muted">
+        Opening your desk
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen md:grid md:grid-cols-[240px_1fr]">
-      <aside className="border-b border-border bg-card md:border-b-0 md:border-r">
-        <div className="flex items-center justify-between px-4 py-4 md:block">
-          <NavLink href="/" className="font-semibold">
-            {HOSPITAL.program}
-          </NavLink>
-          <div className="md:hidden">
+    <div className="min-h-screen bg-bg pb-28">
+      <header className="sticky top-0 z-40 border-b border-border bg-bg/90 backdrop-blur-md">
+        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
+          <Link href="/" className="flex items-center gap-2">
+            <span className="grid size-9 place-items-center rounded-full bg-primary text-[11px] font-semibold text-primary-fg">
+              SH
+            </span>
+            <span className="leading-tight">
+              <span className="block text-sm font-semibold">
+                {HOSPITAL.program}
+              </span>
+              <span className="block text-[11px] text-muted">Member desk</span>
+            </span>
+          </Link>
+          <div className="flex items-center gap-2">
             <ThemeToggle />
+            <AccountMenu
+              name={mini.name}
+              avatarUrl={mini.avatar}
+              onSignOut={signOut}
+            />
           </div>
         </div>
-        <nav className="flex gap-2 overflow-x-auto px-3 pb-3 md:grid md:gap-1 md:px-3" aria-label="Member">
-          {DASH_NAV.map((item) => (
-            <NavLink
-              key={item.href}
-              href={item.href}
-              className="whitespace-nowrap rounded-lg px-3 py-2 text-sm text-muted hover:bg-bg hover:text-fg"
-            >
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-        <div className="hidden items-center justify-between px-4 py-4 md:flex">
-          <ThemeToggle />
-        </div>
-      </aside>
-      <div>
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <p className="truncate text-sm text-muted">{email ?? "Loading member"}</p>
-          <button
-            type="button"
-            onClick={signOut}
-            className="text-sm text-primary"
-          >
-            Sign out
-          </button>
-        </div>
-        <div className="px-4 py-6">{children}</div>
-      </div>
+      </header>
+      <div className="mx-auto max-w-3xl px-4 py-6">{children}</div>
+      <DashDock />
     </div>
   );
 }

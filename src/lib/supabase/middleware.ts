@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { supabaseCookieOptions } from "@/lib/session";
 import { getSupabasePublicEnv } from "./env";
 
 export async function updateSession(request: NextRequest) {
@@ -11,6 +12,7 @@ export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(env.url, env.anonKey, {
+    cookieOptions: supabaseCookieOptions,
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -21,26 +23,16 @@ export async function updateSession(request: NextRequest) {
         );
         supabaseResponse = NextResponse.next({ request });
         cookiesToSet.forEach(({ name, value, options }) =>
-          supabaseResponse.cookies.set(name, value, options),
+          supabaseResponse.cookies.set(name, value, {
+            ...options,
+            ...supabaseCookieOptions,
+          }),
         );
       },
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const path = request.nextUrl.pathname;
-  const needsAuth =
-    path.startsWith("/dashboard") || path.startsWith("/admin");
-
-  if (needsAuth && !user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("next", path);
-    return NextResponse.redirect(url);
-  }
+  await supabase.auth.getUser();
 
   return supabaseResponse;
 }

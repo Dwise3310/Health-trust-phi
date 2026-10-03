@@ -1,13 +1,28 @@
 "use client";
 
 import { Menu, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { HOSPITAL, NAV } from "@/lib/constants";
+import { createClient } from "@/lib/supabase/client";
 import { NavLink } from "./nav-link";
 import { ThemeToggle } from "./theme-toggle";
 
 export function Header({ signedIn }: { signedIn?: boolean }) {
   const [open, setOpen] = useState(false);
+  const [inDesk, setInDesk] = useState(Boolean(signedIn));
+
+  useEffect(() => {
+    const supabase = createClient();
+    if (!supabase) return;
+    supabase.auth.getSession().then(({ data }) => {
+      setInDesk(Boolean(data.session));
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") setInDesk(false);
+      else if (session) setInDesk(true);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-bg/90 backdrop-blur-md">
@@ -39,10 +54,10 @@ export function Header({ signedIn }: { signedIn?: boolean }) {
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <NavLink
-            href={signedIn ? "/dashboard" : "/login"}
+            href={inDesk ? "/dashboard" : "/login"}
             className="btn-press hidden rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-fg sm:inline-flex"
           >
-            {signedIn ? "Dashboard" : "Sign in"}
+            {inDesk ? "Member desk" : "Sign in"}
           </NavLink>
           <button
             type="button"
@@ -72,11 +87,11 @@ export function Header({ signedIn }: { signedIn?: boolean }) {
             </NavLink>
           ))}
           <NavLink
-            href={signedIn ? "/dashboard" : "/login"}
+            href={inDesk ? "/dashboard" : "/login"}
             className="btn-press rounded-full bg-primary px-3 py-2 text-center text-sm font-semibold text-primary-fg"
             onClick={() => setOpen(false)}
           >
-            {signedIn ? "Dashboard" : "Sign in"}
+            {inDesk ? "Member desk" : "Sign in"}
           </NavLink>
         </nav>
       ) : null}
