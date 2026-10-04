@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { ActionButton } from "@/components/action-button";
 import { useToast } from "@/components/toast";
 import { HEALTH_TO_NAIRA } from "@/lib/constants";
@@ -18,16 +19,13 @@ export default function WalletPage() {
   const [uid, setUid] = useState<string | null>(null);
   const [balance, setBalance] = useState(0);
   const [account, setAccount] = useState("");
-  const [quota, setQuota] = useState(100);
+  const [quota, setQuota] = useState(0);
+  const [plan, setPlan] = useState<string | null>(null);
   const [codes, setCodes] = useState<Code[]>([]);
   const [tx, setTx] = useState<Tx[]>([]);
   const [fx, setFx] = useState<Fx | null>(null);
   const [view, setView] = useState<Currency>("health");
   const [percent, setPercent] = useState("5");
-  const [bankName, setBankName] = useState("");
-  const [bankAccount, setBankAccount] = useState("");
-  const [bankAccountName, setBankAccountName] = useState("");
-  const [withdraw, setWithdraw] = useState("50");
 
   const naira = nairaFromHealth(balance);
   const display = useMemo(() => {
@@ -46,25 +44,29 @@ export default function WalletPage() {
   async function load(userId: string) {
     const supabase = createClient();
     if (!supabase) return;
-    const { data: wallet } = await supabase
+    const { data: wallet, error: walletErr } = await supabase
       .from("wallets")
-      .select("*")
+      .select("health_balance, account_number")
       .eq("user_id", userId)
       .maybeSingle();
+    if (walletErr) toast(walletErr.message);
     if (wallet) {
       setBalance(Number(wallet.health_balance || 0));
       setAccount(wallet.account_number);
-      setBankName(wallet.bank_name || "");
-      setBankAccount(wallet.bank_account || "");
-      setBankAccountName(wallet.bank_account_name || "");
     }
     const { data: sub } = await supabase
       .from("subscriptions")
-      .select("quota_remaining")
+      .select("quota_remaining, tier")
       .eq("user_id", userId)
       .eq("active", true)
       .maybeSingle();
-    if (sub) setQuota(Number(sub.quota_remaining));
+    if (sub) {
+      setQuota(Number(sub.quota_remaining));
+      setPlan(sub.tier);
+    } else {
+      setQuota(0);
+      setPlan(null);
+    }
     const { data: codeRows } = await supabase
       .from("care_codes")
       .select("code, allocated_percent, remaining_percent")
@@ -102,22 +104,12 @@ export default function WalletPage() {
       toast("Could not reach your wallet. Try again in a moment.");
       return;
     }
-    const next = balance + amount;
-    const { error } = await supabase
-      .from("wallets")
-      .update({ health_balance: next })
-      .eq("user_id", uid);
+    const { data, error } = await supabase.rpc("sh_test_credit", { p_amount: amount });
     if (error) {
       toast(error.message);
       return;
     }
-    await supabase.from("wallet_tx").insert({
-      user_id: uid,
-      amount,
-      kind: "test_credit",
-      note: "Desk test credit",
-    });
-    setBalance(next);
+    if (typeof data === "number") setBalance(data);
     toast(`Added ${amount} Health`);
     void load(uid);
   }
@@ -128,6 +120,10 @@ export default function WalletPage() {
     const slice = Number(percent);
     if (!supabase || !uid) {
       toast("Could not issue a code right now. Try again.");
+      return;
+    }
+    if (!plan) {
+      toast("Buy a membership first, then issue a Care Quota code.");
       return;
     }
     if (slice > quota) {
@@ -147,44 +143,6 @@ export default function WalletPage() {
       return;
     }
     toast("Care Quota code issued");
-    void load(uid);
-  }
-
-  async function saveBank(e: FormEvent) {
-    e.preventDefault();
-    const supabase = createClient();
-    if (!supabase || !uid) return;
-    const { error } = await supabase
-      .from("wallets")
-      .update({
-        bank_name: bankName,
-        bank_account: bankAccount,
-        bank_account_name: bankAccountName,
-      })
-      .eq("user_id", uid);
-    toast(error ? error.message : "Bank details saved");
-  }
-
-  async function requestWithdraw(e: FormEvent) {
-    e.preventDefault();
-    const supabase = createClient();
-    const amount = Number(withdraw);
-    if (!supabase || !uid) return;
-    if (amount > balance) {
-      toast("Not enough Health.");
-      return;
-    }
-    const { error } = await supabase.from("wallet_tx").insert({
-      user_id: uid,
-      amount: -amount,
-      kind: "withdraw_request",
-      note: `${bankName} ${bankAccount}`,
-    });
-    if (error) {
-      toast(error.message);
-      return;
-    }
-    toast("Withdrawal request filed. Banking rails come next.");
     void load(uid);
   }
 
@@ -230,6 +188,21 @@ export default function WalletPage() {
       </section>
 
       <section className="rounded-2xl border border-border bg-card p-5">
+        <h2 className="text-xl">Membership</h2>
+        <p className="mt-2 text-sm text-muted">
+          {plan
+            ? `Sure Health ${plan} is active. Care Quota remaining ${quota}%.`
+            : "No plan yet. Base, Plus, and Prime are paid from this wallet."}
+        </p>
+        <Link
+          href="/dashboard/membership"
+          className="btn-press mt-4 inline-flex rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-fg"
+        >
+          {plan ? "Change plan" : "Buy a plan"}
+        </Link>
+      </section>
+
+      <section className="rounded-2xl border border-border bg-card p-5">
         <h2 className="text-xl">Funding account</h2>
         <p className="mt-2 font-mono text-lg tracking-wide">
           {account || "Preparing your account number"}
@@ -256,8 +229,8 @@ export default function WalletPage() {
         <h2 className="text-xl">Care Quota</h2>
         <p className="mt-2 text-3xl tabular-nums">{quota}%</p>
         <p className="mt-1 text-sm text-muted">
-          Remaining cover for consults the clinician confirms. Issue a code
-          for family from this same tab.
+          Remaining cover for consults the clinician confirms. Issue a family
+          code from here after you hold a plan.
         </p>
         <form onSubmit={issueCode} className="mt-4 grid gap-3">
           <label className="grid gap-1.5 text-sm">
@@ -286,54 +259,6 @@ export default function WalletPage() {
             </li>
           ))}
         </ul>
-      </section>
-
-      <section className="rounded-2xl border border-border bg-card p-5">
-        <h2 className="text-xl">Withdraw to bank</h2>
-        <form onSubmit={saveBank} className="mt-3 grid gap-3">
-          <label className="grid gap-1.5 text-sm">
-            Bank name
-            <input
-              value={bankName}
-              onChange={(e) => setBankName(e.target.value)}
-              className="rounded-xl border border-border bg-bg px-3 py-2.5"
-            />
-          </label>
-          <label className="grid gap-1.5 text-sm">
-            Account name
-            <input
-              value={bankAccountName}
-              onChange={(e) => setBankAccountName(e.target.value)}
-              className="rounded-xl border border-border bg-bg px-3 py-2.5"
-            />
-          </label>
-          <label className="grid gap-1.5 text-sm">
-            Account number
-            <input
-              value={bankAccount}
-              onChange={(e) => setBankAccount(e.target.value)}
-              className="rounded-xl border border-border bg-bg px-3 py-2.5"
-            />
-          </label>
-          <ActionButton type="submit" variant="secondary">
-            Save bank details
-          </ActionButton>
-        </form>
-        <form onSubmit={requestWithdraw} className="mt-4 grid gap-3">
-          <label className="grid gap-1.5 text-sm">
-            Health to withdraw
-            <input
-              type="number"
-              min={1}
-              value={withdraw}
-              onChange={(e) => setWithdraw(e.target.value)}
-              className="rounded-xl border border-border bg-bg px-3 py-2.5"
-            />
-          </label>
-          <ActionButton type="submit" variant="primary">
-            Request withdrawal
-          </ActionButton>
-        </form>
       </section>
 
       <section className="rounded-2xl border border-border bg-card p-5">

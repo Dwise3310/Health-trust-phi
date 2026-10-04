@@ -1,11 +1,4 @@
 -- Do not run this whole file.
--- The old one-shot script failed with:
---   column "id" referenced in foreign key constraint does not exist
--- because an older profiles table was already there without an id column.
---
--- Run these four files in the SQL editor, one after the other:
---   01-reset.sql
---   02-core.sql
---   03-tables.sql
---   04-rls.sql
-select 'Use supabase/01-reset.sql through 04-rls.sql instead of this file.' as note;
+-- Run 01-reset.sql through 05-grants.sql in order on a fresh project.
+-- If members can log in but features say permission denied, run only 05-grants.sql.
+select 'Use supabase/01-reset.sql through 05-grants.sql.' as note;

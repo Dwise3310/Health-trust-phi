@@ -17,11 +17,15 @@ export default function ReferralDashPage() {
     if (!supabase) return;
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) return;
-      const { data: row } = await supabase
+      const { data: row, error } = await supabase
         .from("profiles")
         .select("referral_code")
         .eq("id", data.user.id)
         .maybeSingle();
+      if (error) {
+        toast(error.message);
+        return;
+      }
       if (row?.referral_code) setCode(row.referral_code);
     });
   }, []);

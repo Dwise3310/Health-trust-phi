@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { ActionButton } from "@/components/action-button";
+import { NavLink } from "@/components/nav-link";
 import { useToast } from "@/components/toast";
 import { createClient } from "@/lib/supabase/client";
 
@@ -181,6 +182,12 @@ export default function OverviewPage() {
           This is the folder the desk will open. Keep it true. Age, next of kin,
           and blood group help the clinician before you sit down.
         </p>
+        <NavLink
+          href="/dashboard/membership"
+          className="mt-4 inline-block text-sm font-semibold text-primary"
+        >
+          Buy or change Base, Plus, or Prime
+        </NavLink>
       </div>
 
       <form onSubmit={save} className="grid gap-4">

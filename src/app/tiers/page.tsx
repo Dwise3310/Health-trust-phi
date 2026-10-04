@@ -39,7 +39,7 @@ export default function TiersPage() {
                 ))}
               </ul>
               <NavLink
-                href="/login"
+                href="/login?next=/dashboard/membership"
                 className="mt-auto rounded-full bg-primary px-4 py-2 text-center text-sm text-primary-fg"
               >
                 Choose {t.short}

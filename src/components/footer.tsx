@@ -41,6 +41,7 @@ export function Footer() {
             <NavLink href="/how-it-works">How Care Quota works</NavLink>
             <NavLink href="/tiers">Membership tiers</NavLink>
             <NavLink href="/referrals">Referral cashback</NavLink>
+            <NavLink href="/roadmap">Roadmap</NavLink>
             <NavLink href="/contact">Ask a question</NavLink>
           </div>
         </div>

@@ -31,16 +31,18 @@ In Supabase Auth, set Site URL to the Vercel domain and add:
 
 ## Database
 
-Run these four files in the Supabase SQL editor, in order. Do not paste the old one-shot `schema.sql`.
+Run these files in the Supabase SQL editor, in order, on a fresh project:
 
 1. `supabase/01-reset.sql`
 2. `supabase/02-core.sql`
 3. `supabase/03-tables.sql`
 4. `supabase/04-rls.sql`
+5. `supabase/05-grants.sql`
 
-Part 1 drops the broken older tables that caused `column "id" referenced in foreign key constraint does not exist`. Part 2 creates profiles, wallets, and the signup trigger. Part 3 creates the rest. Part 4 turns on row security and the avatar bucket.
-
-After SQL, a new signup creates a profile, a wallet, and a unique `SH` account number. Existing auth users are backfilled in part 2.
+If login already works and features say `permission denied for table`, run
+**only** `supabase/05-grants.sql`. Do not re-run part 1. Part 5 grants table
+access to signed-in members and adds the wallet, membership, and withdraw
+functions.
 
 Sessions last 5 days of no visit. Opening the site again while the cookie is valid returns you to the member desk without another login.
 

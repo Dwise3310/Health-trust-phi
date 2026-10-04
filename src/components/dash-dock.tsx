@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  Banknote,
   CalendarDays,
+  Crown,
   Gift,
   LayoutGrid,
   Pill,
@@ -19,6 +21,8 @@ const MAIN = [
 ];
 
 const MORE = [
+  { href: "/dashboard/membership", label: "Membership", icon: Crown },
+  { href: "/dashboard/withdraw", label: "Withdraw", icon: Banknote },
   { href: "/dashboard/referrals", label: "Referrals", icon: Gift },
   { href: "/dashboard/missions", label: "Missions", icon: LayoutGrid },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
