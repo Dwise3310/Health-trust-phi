@@ -22,10 +22,7 @@ export default function TiersPage() {
 
         <div className="mt-10 grid gap-4 lg:grid-cols-3">
           {Object.values(TIERS).map((t) => (
-            <article
-              key={t.id}
-              className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6"
-            >
+            <article key={t.id} className="flex flex-col gap-3">
               <p className="text-sm text-muted">{t.short}</p>
               <h2 className="text-2xl">{t.name}</h2>
               <p className="text-xl tabular-nums">{formatPrice(t.priceHealth)}</p>
@@ -55,7 +52,7 @@ export default function TiersPage() {
             purchase in Health. The percent depends on your tier and theirs.
             The ceiling is 15 percent, Prime to Prime.
           </p>
-          <div className="mt-6 overflow-x-auto rounded-2xl border border-border">
+          <div className="mt-6 overflow-x-auto">
             <table className="w-full min-w-[480px] text-left text-sm">
               <thead className="bg-card">
                 <tr>

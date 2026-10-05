@@ -186,12 +186,12 @@ export default function OverviewPage() {
           href="/dashboard/membership"
           className="mt-4 inline-block text-sm font-semibold text-primary"
         >
-          Buy or change Base, Plus, or Prime
+          Buy or upgrade a plan
         </NavLink>
       </div>
 
       <form onSubmit={save} className="grid gap-4">
-        <section className="rounded-2xl border border-border bg-card p-5">
+        <section className="desk-block">
           <div className="flex items-center gap-4">
             <div className="grid size-20 place-items-center overflow-hidden rounded-full border border-border bg-bg">
               {form.avatar_url ? (
@@ -218,7 +218,7 @@ export default function OverviewPage() {
           </div>
         </section>
 
-        <section className="grid gap-3 rounded-2xl border border-border bg-card p-5">
+        <section className="desk-block grid gap-3">
           <h2 className="text-xl">Identity</h2>
           <Field label="Full name" value={form.full_name} onChange={(v) => set("full_name", v)} />
           <Field
@@ -262,7 +262,7 @@ export default function OverviewPage() {
           <Field label="Occupation" value={form.occupation} onChange={(v) => set("occupation", v)} />
         </section>
 
-        <section className="grid gap-3 rounded-2xl border border-border bg-card p-5">
+        <section className="desk-block grid gap-3">
           <h2 className="text-xl">Place</h2>
           <Field label="Nationality" value={form.nationality} onChange={(v) => set("nationality", v)} />
           <Field label="State of origin" value={form.state_of_origin} onChange={(v) => set("state_of_origin", v)} />
@@ -278,19 +278,13 @@ export default function OverviewPage() {
           </label>
         </section>
 
-        <section className="grid gap-3 rounded-2xl border border-border bg-card p-5">
+        <section className="desk-block grid gap-3">
           <h2 className="text-xl">Clinical notes the desk needs</h2>
           <Field label="Blood group" value={form.blood_group} onChange={(v) => set("blood_group", v)} />
           <Field label="Genotype" value={form.genotype} onChange={(v) => set("genotype", v)} />
           <Field label="Next of kin" value={form.next_of_kin_name} onChange={(v) => set("next_of_kin_name", v)} />
           <Field label="Next of kin phone" value={form.next_of_kin_phone} onChange={(v) => set("next_of_kin_phone", v)} />
         </section>
-
-        {form.referral_code ? (
-          <p className="text-sm text-muted">
-            Referral code <span className="font-mono text-fg">{form.referral_code}</span>
-          </p>
-        ) : null}
 
         <ActionButton type="submit" variant="primary" size="lg">
           Save patient file

@@ -6,14 +6,14 @@ import {
   Crown,
   Gift,
   LayoutGrid,
-  Pill,
   Settings,
+  ShoppingCart,
   UserRound,
   Wallet,
 } from "lucide-react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { NavLink } from "./nav-link";
 
 const MAIN = [
   { href: "/dashboard", label: "File", icon: UserRound },
@@ -42,17 +42,17 @@ export function DashDock() {
               More
             </p>
             {MORE.map((item) => (
-              <Link
+              <NavLink
                 key={item.href}
                 href={item.href}
                 onClick={() => setMore(false)}
-                className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm ${
-                  path.startsWith(item.href) ? "bg-bg text-primary" : ""
+                className={`flex items-center gap-3 px-3 py-3 text-sm ${
+                  path.startsWith(item.href) ? "text-primary" : ""
                 }`}
               >
                 <item.icon className="size-4" />
                 {item.label}
-              </Link>
+              </NavLink>
             ))}
           </div>
         </div>
@@ -62,28 +62,28 @@ export function DashDock() {
         {MAIN.map((item) => {
           const on = path === item.href;
           return (
-            <Link key={item.href} href={item.href} className={on ? "is-on" : ""}>
+            <NavLink key={item.href} href={item.href} className={on ? "is-on" : ""}>
               <item.icon className="size-5" />
               {item.label}
-            </Link>
+            </NavLink>
           );
         })}
-        <Link
+        <NavLink
           href="/dashboard/products"
           className={`dash-dock-center ${
             path.startsWith("/dashboard/products") ? "is-on" : ""
           }`}
-          aria-label="Pharmacy"
+          aria-label="Cart"
         >
-          <Pill className="size-5" />
-        </Link>
-        <Link
+          <ShoppingCart className="size-5" />
+        </NavLink>
+        <NavLink
           href="/dashboard/appointments"
           className={path.startsWith("/dashboard/appointments") ? "is-on" : ""}
         >
           <CalendarDays className="size-5" />
           Visit
-        </Link>
+        </NavLink>
         <button
           type="button"
           className={`dock-item ${onMore || more ? "is-on" : ""}`}

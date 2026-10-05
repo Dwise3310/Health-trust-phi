@@ -40,9 +40,11 @@ Run these files in the Supabase SQL editor, in order, on a fresh project:
 5. `supabase/05-grants.sql`
 
 If login already works and features say `permission denied for table`, run
-**only** `supabase/05-grants.sql`. Do not re-run part 1. Part 5 grants table
-access to signed-in members and adds the wallet, membership, and withdraw
-functions.
+**only** `supabase/05-grants.sql`. Do not re-run part 1.
+
+Then run `supabase/06-logic.sql`. That file sets Care Quota to 100% full,
+blocks plan downgrades while a plan is live, resets missions, and adds
+issue/cancel code, product, card, and visit money functions.
 
 Sessions last 5 days of no visit. Opening the site again while the cookie is valid returns you to the member desk without another login.
 

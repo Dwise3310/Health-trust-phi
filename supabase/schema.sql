@@ -1,4 +1,4 @@
 -- Do not run this whole file.
--- Run 01-reset.sql through 05-grants.sql in order on a fresh project.
--- If members can log in but features say permission denied, run only 05-grants.sql.
-select 'Use supabase/01-reset.sql through 05-grants.sql.' as note;
+-- Fresh project: 01 then 02 then 03 then 04 then 05 then 06.
+-- Live members already: run 05 if permission denied, then 06.
+select 'Use supabase/01-reset.sql through 06-logic.sql.' as note;

@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AccountMenu } from "@/components/account-menu";
 import { DashDock } from "@/components/dash-dock";
+import { HeartbeatLoader } from "@/components/heartbeat-loader";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { HOSPITAL } from "@/lib/constants";
 import { SESSION_MAX_AGE } from "@/lib/session";
@@ -20,6 +21,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [ready, setReady] = useState(false);
   const [mini, setMini] = useState<Mini>({ name: "Member", avatar: null });
 
@@ -89,8 +91,14 @@ export default function DashboardLayout({
 
   if (!ready) {
     return (
-      <div className="grid min-h-screen place-items-center text-sm text-muted">
-        Opening your desk
+      <div
+        className="grid min-h-screen place-items-center"
+        style={{
+          background: "var(--overlay)",
+          backdropFilter: "blur(14px)",
+        }}
+      >
+        <HeartbeatLoader label="Opening your desk" />
       </div>
     );
   }
@@ -120,7 +128,9 @@ export default function DashboardLayout({
           </div>
         </div>
       </header>
-      <div className="mx-auto max-w-3xl px-4 py-6">{children}</div>
+      <div key={pathname} className="tab-in mx-auto max-w-3xl px-4 py-6">
+        {children}
+      </div>
       <DashDock />
     </div>
   );

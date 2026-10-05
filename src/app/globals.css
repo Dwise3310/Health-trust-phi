@@ -549,11 +549,13 @@ input[type="password"]::-ms-clear {
   letter-spacing: 0.01em;
   background: none;
   border: 0;
+  transition: color 0.2s ease, transform 0.2s ease;
 }
 
 .dash-dock a.is-on,
 .dash-dock button.dock-item.is-on {
   color: var(--primary);
+  transform: translateY(-2px);
 }
 
 .dash-dock-center {
@@ -568,10 +570,12 @@ input[type="password"]::-ms-clear {
   background: var(--primary);
   color: var(--primary-fg);
   box-shadow: 0 10px 22px -8px color-mix(in srgb, var(--primary) 70%, transparent);
+  transition: transform 0.22s ease;
 }
 
 .dash-dock-center.is-on {
   outline: 3px solid color-mix(in srgb, var(--primary) 30%, transparent);
+  transform: translateY(-4px) scale(1.04);
 }
 
 .more-sheet {
@@ -593,3 +597,104 @@ input[type="password"]::-ms-clear {
   padding: 0.75rem;
   box-shadow: 0 20px 50px -20px rgba(42, 35, 24, 0.5);
 }
+
+@keyframes tab-in {
+  from {
+    opacity: 0;
+    transform: translate3d(12px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.tab-in {
+  animation: tab-in 0.38s ease both;
+}
+
+.desk-block + .desk-block {
+  margin-top: 1.75rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+}
+
+.util-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1rem 1.25rem;
+  padding: 1.35rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+}
+
+.util-row:last-child {
+  border-bottom: 0;
+}
+
+.pay-track {
+  position: relative;
+  height: 3.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 14%, var(--bg));
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+}
+
+.pay-hint {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.pay-knob {
+  position: absolute;
+  top: 0.35rem;
+  left: 0.35rem;
+  width: 2.7rem;
+  height: 2.7rem;
+  border-radius: 999px;
+  background: var(--primary);
+  box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--primary) 80%, transparent);
+  pointer-events: none;
+}
+
+.pay-knob-right {
+  left: auto;
+  right: 0.35rem;
+}
+
+.pay-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: color-mix(in srgb, var(--fg) 38%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+.pay-sheet {
+  width: min(92vw, 420px);
+  padding: 1.5rem 1.4rem 1.35rem;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.copy-btn {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+}
+

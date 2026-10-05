@@ -26,6 +26,16 @@ export function formatPrice(health: number) {
   return `${formatHealth(health)} (${formatNaira(nairaFromHealth(health))})`;
 }
 
+export function formatWhen(iso: string) {
+  return new Date(iso).toLocaleString("en-NG", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export function isSupabaseConfigured() {
   return Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL &&

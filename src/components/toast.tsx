@@ -39,7 +39,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {message ? (
         <div
           role="status"
-          className="toast-in fixed bottom-20 left-1/2 z-[90] w-[min(92vw,420px)] -translate-x-1/2 rounded-2xl border border-border bg-card px-4 py-3 text-sm shadow-lg md:bottom-6"
+          className="toast-in fixed right-4 top-4 z-[100] w-[min(88vw,340px)] bg-bg/95 px-4 py-3 text-sm shadow-lg backdrop-blur-md md:top-5"
         >
           {message}
         </div>

@@ -90,10 +90,7 @@ function Block({
       </p>
       <ul className="mt-4 grid gap-3">
         {items.map((item) => (
-          <li
-            key={item.title}
-            className="rounded-2xl border border-border bg-card p-5"
-          >
+          <li key={item.title} className="util-row">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h2 className="text-xl">{item.title}</h2>
               <p className="text-xs font-semibold uppercase tracking-wide text-primary">
@@ -124,7 +121,7 @@ export default function RoadmapPage() {
         <Block kicker="Immediate" items={NEXT} />
         <Block kicker="After keys and the hospital pack" items={LATER} />
 
-        <section className="mt-12 rounded-2xl border border-border bg-card p-5 text-sm leading-relaxed text-muted">
+        <section className="mt-12 text-sm leading-relaxed text-muted">
           <h2 className="text-xl text-fg">How to read this</h2>
           <p className="mt-3">
             Members live on the member desk. Staff will live on a separate

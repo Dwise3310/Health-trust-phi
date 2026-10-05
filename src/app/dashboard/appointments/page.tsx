@@ -9,8 +9,9 @@ import {
   PHYSICAL_PRICES,
   VIP_CARD_PRICE_HEALTH,
 } from "@/lib/constants";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, formatWhen } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { useLoading } from "@/components/loading-provider";
 
 type Booking = {
   id: number;
@@ -31,6 +32,7 @@ type Card = {
 
 export default function AppointmentsPage() {
   const { toast } = useToast();
+  const { start, stop } = useLoading();
   const [uid, setUid] = useState<string | null>(null);
   const [kind, setKind] = useState<"physical" | "audio">("physical");
   const [slot, setSlot] = useState("30");
@@ -76,15 +78,15 @@ export default function AppointmentsPage() {
       toast("Could not book right now. Try again.");
       return;
     }
-    const { error } = await supabase.from("appointments").insert({
-      user_id: uid,
-      kind,
-      duration_min: price.minutes,
-      scheduled_at: new Date(when).toISOString(),
-      health_cost: price.health,
-      notes: note,
-      status: "scheduled",
+    start("Booking visit");
+    const { error } = await supabase.rpc("sh_book_visit", {
+      p_kind: kind,
+      p_minutes: price.minutes,
+      p_when: new Date(when).toISOString(),
+      p_note: note,
+      p_cost: price.health,
     });
+    stop();
     if (error) {
       toast(error.message);
       return;
@@ -96,17 +98,13 @@ export default function AppointmentsPage() {
 
   async function buy(type: "normal" | "vip") {
     const supabase = createClient();
-    const cost = type === "vip" ? VIP_CARD_PRICE_HEALTH : CARD_PRICE_HEALTH;
     if (!supabase || !uid) {
       toast("Could not issue a card right now. Try again.");
       return;
     }
-    const { error } = await supabase.from("appointment_cards").insert({
-      user_id: uid,
-      card_type: type,
-      health_cost: cost,
-      status: "active",
-    });
+    start("Issuing card");
+    const { error } = await supabase.rpc("sh_buy_card", { p_type: type });
+    stop();
     if (error) {
       toast(error.message);
       return;
@@ -128,10 +126,7 @@ export default function AppointmentsPage() {
         </p>
       </div>
 
-      <form
-        onSubmit={onSubmit}
-        className="grid gap-3 rounded-2xl border border-border bg-card p-5"
-      >
+      <form onSubmit={onSubmit} className="desk-block grid gap-3">
         <fieldset className="grid gap-2 text-sm">
           <legend className="font-semibold">Type</legend>
           <label className="flex items-center gap-2">
@@ -197,39 +192,37 @@ export default function AppointmentsPage() {
         </ActionButton>
       </form>
 
-      <section className="rounded-2xl border border-border bg-card p-5">
-        <h2 className="text-xl">Upcoming</h2>
-        <ul className="mt-3 grid gap-2">
+      <section className="desk-block">
+        <h2 className="text-xl">Visit receipts</h2>
+        <ul className="mt-3 grid gap-4">
           {bookings.length === 0 ? (
             <li className="text-sm text-muted">No visit on the board yet.</li>
           ) : (
             bookings.map((b) => (
-              <li
-                key={b.id}
-                className="rounded-xl border border-border px-4 py-3 text-sm"
-              >
+              <li key={b.id}>
                 <p className="font-semibold capitalize">
-                  {b.kind} · {b.duration_min} min
+                  {b.kind === "audio" ? "In-app audio call" : "Physical visit"}
                 </p>
-                <p className="mt-1 text-muted">
-                  {new Date(b.scheduled_at).toLocaleString("en-NG")} ·{" "}
-                  {formatPrice(Number(b.health_cost))} · {b.status}
+                <p className="mt-1 text-sm text-muted">
+                  {formatWhen(b.scheduled_at)} · {b.duration_min} minutes ·{" "}
+                  {b.status}
                 </p>
+                <p className="mt-1 text-sm">{formatPrice(Number(b.health_cost))}</p>
               </li>
             ))
           )}
         </ul>
       </section>
 
-      <section className="rounded-2xl border border-border bg-card p-5">
+      <section className="desk-block">
         <h2 className="text-xl">Digital appointment cards</h2>
         <p className="mt-2 text-sm text-muted">
           Skip the paper queue at reception. A normal card holds your place. A
           VIP card is for immediate consultation. Prime still sits in the Prime
           lounge on arrival.
         </p>
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          <article className="rounded-xl border border-border p-4">
+        <div className="mt-4 grid gap-6 md:grid-cols-2">
+          <article>
             <h3 className="font-semibold">Normal card</h3>
             <p className="mt-1 text-sm">{formatPrice(CARD_PRICE_HEALTH)}</p>
             <ActionButton
@@ -240,7 +233,7 @@ export default function AppointmentsPage() {
               Buy normal
             </ActionButton>
           </article>
-          <article className="rounded-xl border border-border p-4">
+          <article>
             <h3 className="font-semibold">VIP card</h3>
             <p className="mt-1 text-sm">{formatPrice(VIP_CARD_PRICE_HEALTH)}</p>
             <ActionButton
@@ -252,16 +245,16 @@ export default function AppointmentsPage() {
             </ActionButton>
           </article>
         </div>
-        <ul className="mt-4 grid gap-2">
+        <ul className="mt-6 grid gap-4">
           {cards.map((c) => (
-            <li
-              key={c.id}
-              className="flex items-center justify-between rounded-xl border border-border px-4 py-3 text-sm"
-            >
-              <span className="font-mono uppercase">
+            <li key={c.id}>
+              <p className="font-mono uppercase">
                 {c.card_type}-{c.id}
-              </span>
-              <span className="text-muted">{c.status}</span>
+              </p>
+              <p className="mt-1 text-sm text-muted">
+                Issued {formatWhen(c.created_at)} · {c.status} ·{" "}
+                {formatPrice(Number(c.health_cost))}
+              </p>
             </li>
           ))}
         </ul>

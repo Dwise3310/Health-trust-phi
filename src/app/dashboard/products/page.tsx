@@ -1,70 +1,94 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ActionButton } from "@/components/action-button";
+import { useLoading } from "@/components/loading-provider";
 import { useToast } from "@/components/toast";
 import { CATALOG } from "@/lib/catalog";
 import { formatPrice } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
 export default function ProductsPage() {
   const { toast } = useToast();
+  const { start, stop } = useLoading();
   const [group, setGroup] = useState(CATALOG[0].id);
-  const [bag, setBag] = useState<{ id: string; name: string; health: number }[]>(
+  const [bag, setBag] = useState<{ id: string; name: string; health: number; sku: string }[]>(
     [],
   );
+  const [uid, setUid] = useState<string | null>(null);
 
   const current = useMemo(
     () => CATALOG.find((g) => g.id === group) || CATALOG[0],
     [group],
   );
+  const total = bag.reduce((n, item) => n + item.health, 0);
 
-  function add(id: string, name: string, health: number) {
-    setBag((list) => [...list, { id, name, health }]);
+  useEffect(() => {
+    const supabase = createClient();
+    if (!supabase) return;
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) setUid(data.user.id);
+    });
+  }, []);
+
+  function add(id: string, name: string, health: number, sku: string) {
+    setBag((list) => [...list, { id, name, health, sku }]);
     toast(`${name} added to bag`);
   }
 
-  const total = bag.reduce((n, item) => n + item.health, 0);
+  async function checkout() {
+    const supabase = createClient();
+    if (!supabase || !uid) {
+      toast("Could not reach the dispensary. Try again.");
+      return;
+    }
+    if (bag.length === 0) return;
+    start("Paying the bag");
+    for (const item of bag) {
+      const { error } = await supabase.rpc("sh_buy_product", {
+        p_name: item.name,
+        p_sku: item.sku,
+        p_amount: item.health,
+      });
+      if (error) {
+        stop();
+        toast(error.message);
+        return;
+      }
+    }
+    stop();
+    setBag([]);
+    toast("Dispensary paid from your wallet");
+  }
 
   return (
-    <main className="grid gap-5">
+    <main className="grid gap-2">
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
           Pharmacy
         </p>
-        <h1 className="mt-1 text-3xl">Dispensary and campus stock</h1>
-        <p className="mt-2 text-sm leading-relaxed text-muted">
-          These are template shelves. Names, prices, and photos will be swapped
-          for real Eastern Ryse stock when the hospital pack lands. Add items
-          now so the flow is already in place.
-        </p>
+        <h1 className="mt-1 text-3xl">Medicines, devices, surgical stock</h1>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="flex gap-4 overflow-x-auto py-2 text-sm">
         {CATALOG.map((g) => (
           <button
             key={g.id}
             type="button"
             onClick={() => setGroup(g.id)}
-            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${
-              group === g.id
-                ? "bg-primary text-primary-fg"
-                : "border border-border bg-card"
-            }`}
+            className={group === g.id ? "text-primary" : "text-muted"}
           >
             {g.title}
           </button>
         ))}
       </div>
 
-      <section className="rounded-2xl border border-border bg-card p-5">
+      <section className="desk-block">
         <h2 className="text-xl">{current.title}</h2>
         <p className="mt-1 text-sm text-muted">{current.blurb}</p>
-        <ul className="mt-4 grid gap-3">
+        <ul className="mt-4 grid gap-5">
           {current.items.map((item) => (
-            <li
-              key={item.id}
-              className="flex items-start justify-between gap-3 rounded-xl border border-border px-4 py-3"
-            >
+            <li key={item.id} className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold">{item.name}</p>
                 <p className="mt-1 text-xs text-muted">{item.blurb}</p>
@@ -75,7 +99,7 @@ export default function ProductsPage() {
                 <ActionButton
                   variant="secondary"
                   size="sm"
-                  onClick={() => add(item.id, item.name, item.health)}
+                  onClick={() => add(item.id, item.name, item.health, item.sku)}
                 >
                   Add
                 </ActionButton>
@@ -85,7 +109,7 @@ export default function ProductsPage() {
         </ul>
       </section>
 
-      <section className="rounded-2xl border border-border bg-card p-5">
+      <section className="desk-block">
         <h2 className="text-xl">Bag</h2>
         {bag.length === 0 ? (
           <p className="mt-2 text-sm text-muted">Empty. Stock is paid in Health.</p>
@@ -94,20 +118,16 @@ export default function ProductsPage() {
             <ul className="mt-3 grid gap-2 text-sm">
               {bag.map((item, i) => (
                 <li key={`${item.id}-${i}`} className="flex justify-between">
-                  <span>{item.name}</span>
+                  <span>
+                    {item.name} · {item.sku}
+                  </span>
                   <span className="tabular-nums">{item.health} H</span>
                 </li>
               ))}
             </ul>
             <p className="mt-3 text-sm font-semibold">Total {formatPrice(total)}</p>
-            <ActionButton
-              className="mt-3"
-              variant="primary"
-              onClick={() =>
-                toast("Checkout waits for the live pharmacy catalog.")
-              }
-            >
-              Request dispense
+            <ActionButton className="mt-3" variant="primary" onClick={checkout}>
+              Pay bag
             </ActionButton>
           </>
         )}

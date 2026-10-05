@@ -1,26 +1,42 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { Copy } from "lucide-react";
 import { ActionButton } from "@/components/action-button";
+import { NavLink } from "@/components/nav-link";
 import { useToast } from "@/components/toast";
-import { HEALTH_TO_NAIRA } from "@/lib/constants";
-import { formatHealth, formatNaira, nairaFromHealth } from "@/lib/utils";
+import { HEALTH_TO_NAIRA, TIERS, type TierId } from "@/lib/constants";
+import { formatHealth, formatNaira, formatWhen, nairaFromHealth } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { useLoading } from "@/components/loading-provider";
 
 type Fx = { usd: number; eur: number; asOf: string };
-type Code = { code: string; allocated_percent: number; remaining_percent: number };
+type Code = {
+  id: number;
+  code: string;
+  allocated_percent: number;
+  remaining_percent: number;
+  status: string;
+  created_at: string;
+};
 type Tx = { id: number; amount: number; kind: string; note: string | null; created_at: string };
-
+type Sub = {
+  tier: TierId;
+  started_at: string;
+  expires_at: string;
+  quota_percent: number;
+  quota_remaining: number;
+  next_refresh_at: string;
+};
 type Currency = "health" | "ngn" | "usd" | "eur";
 
 export default function WalletPage() {
   const { toast } = useToast();
+  const { start, stop } = useLoading();
   const [uid, setUid] = useState<string | null>(null);
   const [balance, setBalance] = useState(0);
   const [account, setAccount] = useState("");
-  const [quota, setQuota] = useState(0);
-  const [plan, setPlan] = useState<string | null>(null);
+  const [sub, setSub] = useState<Sub | null>(null);
   const [codes, setCodes] = useState<Code[]>([]);
   const [tx, setTx] = useState<Tx[]>([]);
   const [fx, setFx] = useState<Fx | null>(null);
@@ -54,22 +70,16 @@ export default function WalletPage() {
       setBalance(Number(wallet.health_balance || 0));
       setAccount(wallet.account_number);
     }
-    const { data: sub } = await supabase
+    const { data: row } = await supabase
       .from("subscriptions")
-      .select("quota_remaining, tier")
+      .select("tier, started_at, expires_at, quota_percent, quota_remaining, next_refresh_at")
       .eq("user_id", userId)
       .eq("active", true)
       .maybeSingle();
-    if (sub) {
-      setQuota(Number(sub.quota_remaining));
-      setPlan(sub.tier);
-    } else {
-      setQuota(0);
-      setPlan(null);
-    }
+    setSub((row as Sub) || null);
     const { data: codeRows } = await supabase
       .from("care_codes")
-      .select("code, allocated_percent, remaining_percent")
+      .select("id, code, allocated_percent, remaining_percent, status, created_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
     setCodes((codeRows as Code[]) || []);
@@ -78,7 +88,7 @@ export default function WalletPage() {
       .select("id, amount, kind, note, created_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
-      .limit(20);
+      .limit(30);
     setTx((history as Tx[]) || []);
   }
 
@@ -104,7 +114,9 @@ export default function WalletPage() {
       toast("Could not reach your wallet. Try again in a moment.");
       return;
     }
+    start("Adding Health");
     const { data, error } = await supabase.rpc("sh_test_credit", { p_amount: amount });
+    stop();
     if (error) {
       toast(error.message);
       return;
@@ -122,22 +134,17 @@ export default function WalletPage() {
       toast("Could not issue a code right now. Try again.");
       return;
     }
-    if (!plan) {
+    if (!sub) {
       toast("Buy a membership first, then issue a Care Quota code.");
       return;
     }
-    if (slice > quota) {
+    if (slice > Number(sub.quota_remaining)) {
       toast("That slice is bigger than remaining Care Quota.");
       return;
     }
-    const code = `SH-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-    const { error } = await supabase.from("care_codes").insert({
-      user_id: uid,
-      code,
-      allocated_percent: slice,
-      remaining_percent: slice,
-      status: "active",
-    });
+    start("Issuing code");
+    const { error } = await supabase.rpc("sh_issue_code", { p_percent: slice });
+    stop();
     if (error) {
       toast(error.message);
       return;
@@ -146,8 +153,34 @@ export default function WalletPage() {
     void load(uid);
   }
 
+  async function copyCode(code: string) {
+    try {
+      await navigator.clipboard.writeText(code);
+      toast("Code copied");
+    } catch {
+      toast(code);
+    }
+  }
+
+  async function cancelCode(code: string) {
+    const supabase = createClient();
+    if (!supabase || !uid) return;
+    start("Cancelling code");
+    const { error } = await supabase.rpc("sh_cancel_code", { p_code: code });
+    stop();
+    if (error) {
+      toast(error.message);
+      return;
+    }
+    toast("Code cancelled. Quota returned.");
+    void load(uid);
+  }
+
+  const plan = sub ? TIERS[sub.tier] : null;
+  const used = sub ? Number(sub.quota_percent) - Number(sub.quota_remaining) : 0;
+
   return (
-    <main className="grid gap-5">
+    <main className="grid gap-2">
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
           Wallet
@@ -155,10 +188,10 @@ export default function WalletPage() {
         <h1 className="mt-1 text-3xl">Health on your name</h1>
       </div>
 
-      <section className="rounded-2xl border border-border bg-card p-5">
+      <section className="desk-block">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm text-muted">Balance</p>
-          <div className="flex rounded-full border border-border p-1 text-xs">
+          <div className="flex gap-1 text-xs">
             {(
               [
                 ["health", "Health"],
@@ -171,8 +204,8 @@ export default function WalletPage() {
                 key={id}
                 type="button"
                 onClick={() => setView(id)}
-                className={`rounded-full px-2.5 py-1 ${
-                  view === id ? "bg-primary text-primary-fg" : ""
+                className={`px-2.5 py-1 ${
+                  view === id ? "text-primary" : "text-muted"
                 }`}
               >
                 {label}
@@ -182,34 +215,63 @@ export default function WalletPage() {
         </div>
         <p className="mt-3 font-serif text-4xl tabular-nums">{display}</p>
         <p className="mt-2 text-sm text-muted">
-          1 Health is ₦{HEALTH_TO_NAIRA} (fixed). USD and EUR follow live naira
-          market rates{fx ? `, as of ${fx.asOf}` : ""}.
+          1 Health is ₦{HEALTH_TO_NAIRA} (fixed). USD and EUR use live naira
+          rates from ExchangeRate-API (open.er-api.com), refreshed every 30
+          minutes{fx ? `. Last print ${fx.asOf}` : ""}.
         </p>
       </section>
 
-      <section className="rounded-2xl border border-border bg-card p-5">
-        <h2 className="text-xl">Membership</h2>
-        <p className="mt-2 text-sm text-muted">
-          {plan
-            ? `Sure Health ${plan} is active. Care Quota remaining ${quota}%.`
-            : "No plan yet. Base, Plus, and Prime are paid from this wallet."}
-        </p>
-        <Link
-          href="/dashboard/membership"
-          className="btn-press mt-4 inline-flex rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-fg"
-        >
-          {plan ? "Change plan" : "Buy a plan"}
-        </Link>
+      <section className="desk-block">
+        <p className="text-sm text-muted">Current plan</p>
+        {plan && sub ? (
+          <div className="mt-2 grid gap-2">
+            <h2 className="text-2xl">{plan.name}</h2>
+            <p className="text-sm text-muted">{plan.quotaHint}</p>
+            <p className="text-sm">
+              {plan.durationMonths} months · queue rank {plan.queue} ·{" "}
+              {plan.refreshes} quota refreshes
+            </p>
+            <p className="text-sm">
+              Active {formatWhen(sub.started_at)} · ends{" "}
+              {new Date(sub.expires_at).toLocaleDateString("en-NG")}
+            </p>
+            <p className="text-sm">
+              Care Quota {Number(sub.quota_remaining)}% remaining of{" "}
+              {Number(sub.quota_percent)}% · {used}% already allocated · next
+              refresh {new Date(sub.next_refresh_at).toLocaleDateString("en-NG")}
+            </p>
+            <ul className="mt-1 grid gap-1 text-sm text-muted">
+              {plan.perks.map((p) => (
+                <li key={p}>{p}</li>
+              ))}
+            </ul>
+            {sub.tier !== "prime" ? (
+              <NavLink
+                href="/dashboard/membership"
+                className="mt-2 inline-block text-sm font-semibold text-primary"
+              >
+                Upgrade plan
+              </NavLink>
+            ) : null}
+          </div>
+        ) : (
+          <p className="mt-2 text-sm text-muted">
+            No plan yet.{" "}
+            <NavLink href="/dashboard/membership" className="font-semibold text-primary">
+              Choose Base, Plus, or Prime
+            </NavLink>
+          </p>
+        )}
       </section>
 
-      <section className="rounded-2xl border border-border bg-card p-5">
+      <section className="desk-block">
         <h2 className="text-xl">Funding account</h2>
         <p className="mt-2 font-mono text-lg tracking-wide">
           {account || "Preparing your account number"}
         </p>
         <p className="mt-2 text-sm text-muted">
           This number is yours for life. Pay into it from any Nigerian bank.
-          1 Health is ₦100. Incoming naira lands as Health in this wallet.
+          1 Health is ₦100.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           {[50, 100, 250].map((n) => (
@@ -225,12 +287,10 @@ export default function WalletPage() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-border bg-card p-5">
-        <h2 className="text-xl">Care Quota</h2>
-        <p className="mt-2 text-3xl tabular-nums">{quota}%</p>
+      <section className="desk-block">
+        <h2 className="text-xl">Care Quota codes</h2>
         <p className="mt-1 text-sm text-muted">
-          Remaining cover for consults the clinician confirms. Issue a family
-          code from here after you hold a plan.
+          Remaining cover {sub ? `${sub.quota_remaining}% of 100%` : "needs a plan"}.
         </p>
         <form onSubmit={issueCode} className="mt-4 grid gap-3">
           <label className="grid gap-1.5 text-sm">
@@ -238,7 +298,7 @@ export default function WalletPage() {
             <input
               type="number"
               min={1}
-              max={15}
+              max={100}
               value={percent}
               onChange={(e) => setPercent(e.target.value)}
               className="rounded-xl border border-border bg-bg px-3 py-2.5"
@@ -248,38 +308,64 @@ export default function WalletPage() {
             Issue Care Quota code
           </ActionButton>
         </form>
-        <ul className="mt-4 grid gap-2">
-          {codes.map((c) => (
-            <li
-              key={c.code}
-              className="flex items-center justify-between rounded-xl border border-border px-4 py-3 text-sm"
-            >
-              <span className="font-mono">{c.code}</span>
-              <span className="text-muted">{c.allocated_percent}% reserved</span>
-            </li>
-          ))}
+        <ul className="mt-5 grid gap-5">
+          {codes.map((c) => {
+            const usedPct = Number(c.allocated_percent) - Number(c.remaining_percent);
+            return (
+              <li key={c.code}>
+                <div className="flex items-center gap-2">
+                  <p className="font-mono text-lg">{c.code}</p>
+                  <button
+                    type="button"
+                    className="copy-btn"
+                    onClick={() => copyCode(c.code)}
+                    aria-label="Copy code"
+                  >
+                    <Copy className="size-3.5" />
+                  </button>
+                </div>
+                <p className="mt-1 text-sm text-muted">
+                  Issued {formatWhen(c.created_at)} · {c.status}
+                </p>
+                <p className="mt-1 text-sm">
+                  {usedPct}% used of {c.allocated_percent}% allocated ·{" "}
+                  {c.remaining_percent}% still on this code
+                </p>
+                {c.status === "active" ? (
+                  <ActionButton
+                    className="mt-2"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => cancelCode(c.code)}
+                  >
+                    Cancel code
+                  </ActionButton>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       </section>
 
-      <section className="rounded-2xl border border-border bg-card p-5">
-        <h2 className="text-xl">History</h2>
-        <ul className="mt-3 grid gap-2">
+      <section className="desk-block">
+        <h2 className="text-xl">Activity</h2>
+        <ul className="mt-3 grid gap-4">
           {tx.length === 0 ? (
             <li className="text-sm text-muted">No movement yet.</li>
           ) : (
             tx.map((row) => (
-              <li
-                key={row.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-border px-4 py-3 text-sm"
-              >
-                <span>
+              <li key={row.id}>
+                <p className="text-sm font-semibold capitalize">
                   {row.kind.replaceAll("_", " ")}
-                  {row.note ? ` · ${row.note}` : ""}
-                </span>
-                <span className="tabular-nums">
+                </p>
+                <p className="mt-1 text-sm text-muted">
+                  {formatWhen(row.created_at)}
+                </p>
+                <p className="mt-1 text-sm">{row.note || "Wallet movement"}</p>
+                <p className="mt-1 tabular-nums">
                   {row.amount > 0 ? "+" : ""}
-                  {row.amount} H
-                </span>
+                  {row.amount} Health
+                </p>
               </li>
             ))
           )}

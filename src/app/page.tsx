@@ -118,51 +118,53 @@ export default function HomePage() {
             Care Quota is the flagship. Around it sit the daily tools: booking,
             pharmacy, cards, calls, wallet, family codes, and hospital updates.
           </p>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {UTILITIES.map((item) => (
-              <article
-                key={item.title}
-                className="rounded-2xl border border-border bg-card p-5"
-              >
-                <item.icon className="size-5 text-primary" aria-hidden />
-                <h3 className="mt-3 text-xl">{item.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted">
-                  {item.body}
-                </p>
+          <div className="mt-10">
+            {UTILITIES.map((item, i) => (
+              <article key={item.title} className="util-row">
+                <span className="pt-1 font-mono text-xs text-primary">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <item.icon className="size-4 text-primary" aria-hidden />
+                    <h3 className="text-xl">{item.title}</h3>
+                  </div>
+                  <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
+                    {item.body}
+                  </p>
+                </div>
               </article>
             ))}
           </div>
         </section>
 
-        <section className="border-y border-border bg-card">
-          <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-16 md:grid-cols-2">
-            <div className="relative aspect-[4/3] overflow-hidden rounded-2xl">
-              <Image
-                src="/medical/still-life.jpg"
-                alt="Stethoscope and medicine bottles on cream linen"
-                fill
-                className="object-cover"
-              />
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
-                Care Quota
-              </p>
-              <h2 className="mt-2 text-3xl md:text-4xl">
-                Cover for the consult, not a blank cheque
-              </h2>
-              <p className="mt-4 text-sm leading-relaxed text-muted">
-                The clinician confirms the percentage on site. Surgery, boarding,
-                and dispensary drugs sit outside unless written into your folder.
-                Share a code and family is treated with your queue standing.
-              </p>
-              <NavLink
-                href="/how-it-works"
-                className="btn-press mt-6 inline-flex rounded-full border border-border px-5 py-2.5 text-sm"
-              >
-                How quota works
-              </NavLink>
-            </div>
+        <section className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-16 md:grid-cols-2">
+          <div className="relative aspect-[4/3] overflow-hidden">
+            <Image
+              src="/medical/still-life.jpg"
+              alt="Stethoscope and medicine bottles on cream linen"
+              fill
+              className="object-cover"
+            />
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+              Care Quota
+            </p>
+            <h2 className="mt-2 text-3xl md:text-4xl">
+              Cover for the consult, not a blank cheque
+            </h2>
+            <p className="mt-4 text-sm leading-relaxed text-muted">
+              The clinician confirms the percentage on site. Surgery, boarding,
+              and dispensary drugs sit outside unless written into your folder.
+              Share a code and family is treated with your queue standing.
+            </p>
+            <NavLink
+              href="/how-it-works"
+              className="btn-press mt-6 inline-flex rounded-full border border-border px-5 py-2.5 text-sm"
+            >
+              How quota works
+            </NavLink>
           </div>
         </section>
 
@@ -178,7 +180,7 @@ export default function HomePage() {
               already in their name.
             </p>
           </div>
-          <div className="relative order-1 aspect-[16/10] overflow-hidden rounded-2xl md:order-2">
+          <div className="relative order-1 aspect-[16/10] overflow-hidden md:order-2">
             <Image
               src="/medical/corridor.jpg"
               alt="Quiet hospital corridor with cream walls"
@@ -188,8 +190,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="border-t border-border">
-          <div className="mx-auto max-w-6xl px-4 py-16">
+        <section className="mx-auto max-w-6xl px-4 py-16">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
@@ -205,12 +206,9 @@ export default function HomePage() {
                 Compare in full
               </NavLink>
             </div>
-            <div className="mt-8 grid gap-3 md:grid-cols-3">
+            <div className="mt-8 grid gap-8 md:grid-cols-3">
               {Object.values(TIERS).map((t) => (
-                <article
-                  key={t.id}
-                  className="rounded-2xl border border-border bg-card p-5"
-                >
+                <article key={t.id}>
                   <p className="text-sm text-muted">{t.short}</p>
                   <h3 className="mt-1 text-xl">{t.name}</h3>
                   <p className="mt-2 text-sm tabular-nums">
@@ -219,7 +217,6 @@ export default function HomePage() {
                 </article>
               ))}
             </div>
-          </div>
         </section>
 
         <section className="border-t border-border bg-primary px-4 py-14 text-primary-fg">

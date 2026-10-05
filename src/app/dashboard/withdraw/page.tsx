@@ -96,7 +96,7 @@ export default function WithdrawPage() {
 
       <form
         onSubmit={saveBank}
-        className="grid gap-3 rounded-2xl border border-border bg-card p-5"
+        className="desk-block grid gap-3"
       >
         <h2 className="text-xl">Bank details</h2>
         <label className="grid gap-1.5 text-sm">
@@ -133,7 +133,7 @@ export default function WithdrawPage() {
 
       <form
         onSubmit={requestWithdraw}
-        className="grid gap-3 rounded-2xl border border-border bg-card p-5"
+        className="desk-block grid gap-3"
       >
         <h2 className="text-xl">Issue a withdrawal</h2>
         <label className="grid gap-1.5 text-sm">

@@ -40,7 +40,7 @@ export default function HowItWorksPage() {
         </section>
 
         <section className="mt-10 grid gap-6 md:grid-cols-2">
-          <div className="rounded-2xl border border-border bg-card p-5">
+          <div>
             <h3 className="text-xl">Usually inside quota</h3>
             <ul className="mt-3 grid gap-2 text-sm text-muted">
               {COVERED_UNDER_QUOTA.map((item) => (
@@ -48,7 +48,7 @@ export default function HowItWorksPage() {
               ))}
             </ul>
           </div>
-          <div className="rounded-2xl border border-border bg-card p-5">
+          <div>
             <h3 className="text-xl">Outside quota</h3>
             <ul className="mt-3 grid gap-2 text-sm text-muted">
               {NOT_COVERED_UNDER_QUOTA.map((item) => (

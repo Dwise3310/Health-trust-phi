@@ -99,10 +99,7 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <form
-        onSubmit={saveUsername}
-        className="grid gap-3 rounded-2xl border border-border bg-card p-5"
-      >
+      <form onSubmit={saveUsername} className="desk-block grid gap-3">
         <h2 className="text-xl">Public username</h2>
         <label className="grid gap-1.5 text-sm">
           Username
@@ -119,10 +116,7 @@ export default function SettingsPage() {
         </ActionButton>
       </form>
 
-      <form
-        onSubmit={savePrefs}
-        className="grid gap-3 rounded-2xl border border-border bg-card p-5"
-      >
+      <form onSubmit={savePrefs} className="desk-block grid gap-3">
         <h2 className="text-xl">Contact and alerts</h2>
         <label className="grid gap-1.5 text-sm">
           Phone
@@ -153,7 +147,7 @@ export default function SettingsPage() {
         </ActionButton>
       </form>
 
-      <section className="grid gap-3 rounded-2xl border border-border bg-card p-5">
+      <section className="desk-block grid gap-3">
         <h2 className="text-xl">Account</h2>
         <p className="text-sm text-muted">
           Login mail is held by the auth service. It is not shown as a raw

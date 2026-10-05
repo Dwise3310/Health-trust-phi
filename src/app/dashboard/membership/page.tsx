@@ -2,21 +2,27 @@
 
 import { useEffect, useState } from "react";
 import { ActionButton } from "@/components/action-button";
+import { PaySlide } from "@/components/pay-slide";
+import { useLoading } from "@/components/loading-provider";
 import { useToast } from "@/components/toast";
 import { TIERS, type TierId } from "@/lib/constants";
 import { formatPrice } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 
 const ORDER: TierId[] = ["base", "plus", "prime"];
+const RANK: Record<TierId, number> = { base: 1, plus: 2, prime: 3 };
 
-type Sub = { tier: string; expires_at: string; quota_remaining: number };
+type Sub = { tier: TierId; expires_at: string; quota_remaining: number };
 
 export default function MembershipPage() {
   const { toast } = useToast();
+  const { start, stop } = useLoading();
   const [uid, setUid] = useState<string | null>(null);
   const [balance, setBalance] = useState(0);
   const [sub, setSub] = useState<Sub | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
+  const [pick, setPick] = useState<TierId | null>(null);
+  const [step, setStep] = useState<"ask" | "slide">("ask");
+  const [busy, setBusy] = useState(false);
 
   async function load(userId: string) {
     const supabase = createClient();
@@ -46,86 +52,129 @@ export default function MembershipPage() {
     });
   }, []);
 
-  async function buy(id: TierId) {
+  function canBuy(id: TierId) {
+    if (!sub) return true;
+    if (new Date(sub.expires_at) <= new Date()) return true;
+    return RANK[id] > RANK[sub.tier];
+  }
+
+  async function pay(id: TierId) {
     const supabase = createClient();
     if (!supabase || !uid) return;
-    const tier = TIERS[id];
-    if (balance < tier.priceHealth) {
-      toast("Not enough Health. Use Wallet test credit first, then come back.");
-      return;
-    }
-    setBusy(id);
+    setBusy(true);
+    start("Confirming plan");
     const { error } = await supabase.rpc("sh_buy_tier", { p_tier: id });
-    setBusy(null);
+    stop();
+    setBusy(false);
+    setPick(null);
     if (error) {
       toast(error.message);
       return;
     }
-    toast(`${tier.name} is now active`);
+    toast(`${TIERS[id].name} is now active`);
     void load(uid);
   }
 
   return (
-    <main className="grid gap-5">
+    <main className="grid gap-2">
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
           Membership
         </p>
         <h1 className="mt-1 text-3xl">Choose Base, Plus, or Prime</h1>
         <p className="mt-2 text-sm text-muted">
-          Paid from your Health wallet. Wallet has {balance} Health right now.
+          Paid from your Health wallet. You have {balance} Health. You can
+          upgrade while a plan is live. You cannot step down until it ends.
         </p>
       </div>
 
-      {sub ? (
-        <section className="rounded-2xl border border-border bg-card p-5">
-          <p className="text-sm text-muted">Active plan</p>
-          <p className="mt-1 text-2xl capitalize">Sure Health {sub.tier}</p>
-          <p className="mt-1 text-sm text-muted">
-            Until {new Date(sub.expires_at).toLocaleDateString("en-NG")} · Care
-            Quota remaining {sub.quota_remaining}%
-          </p>
-        </section>
-      ) : (
-        <p className="text-sm text-muted">No plan yet. Pick one below.</p>
-      )}
-
-      <div className="grid gap-3">
-        {ORDER.map((id) => {
-          const tier = TIERS[id];
-          const on = sub?.tier === id;
-          return (
-            <article
-              key={id}
-              className="rounded-2xl border border-border bg-card p-5"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h2 className="text-xl">{tier.name}</h2>
-                  <p className="mt-1 text-sm text-muted">{tier.quotaHint}</p>
-                </div>
-                <p className="text-sm font-semibold">{formatPrice(tier.priceHealth)}</p>
+      {ORDER.map((id) => {
+        const tier = TIERS[id];
+        const on = sub?.tier === id;
+        const allowed = canBuy(id);
+        return (
+          <article key={id} className="desk-block">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-xl">{tier.name}</h2>
+                <p className="mt-1 text-sm text-muted">{tier.quotaHint}</p>
               </div>
-              <p className="mt-2 text-xs text-muted">
-                {tier.durationMonths} months · queue rank {tier.queue}
-              </p>
-              <ul className="mt-3 grid gap-1 text-sm text-muted">
-                {tier.perks.map((p) => (
-                  <li key={p}>{p}</li>
-                ))}
-              </ul>
-              <ActionButton
-                className="mt-4"
-                variant={on ? "secondary" : "primary"}
-                disabled={on || busy === id}
-                onClick={() => buy(id)}
-              >
-                {on ? "Current plan" : busy === id ? "Paying" : `Pay ${tier.short}`}
-              </ActionButton>
-            </article>
-          );
-        })}
-      </div>
+              <p className="text-sm font-semibold">{formatPrice(tier.priceHealth)}</p>
+            </div>
+            <p className="mt-2 text-xs text-muted">
+              {tier.durationMonths} months · queue rank {tier.queue} · Care Quota
+              starts at 100%
+            </p>
+            <ul className="mt-3 grid gap-1 text-sm text-muted">
+              {tier.perks.map((p) => (
+                <li key={p}>{p}</li>
+              ))}
+            </ul>
+            <ActionButton
+              className="mt-4"
+              variant={on ? "secondary" : "primary"}
+              disabled={on || !allowed}
+              onClick={() => {
+                if (balance < tier.priceHealth) {
+                  toast("Not enough Health. Add some in Wallet first.");
+                  return;
+                }
+                setPick(id);
+                setStep("ask");
+              }}
+            >
+              {on ? "Current plan" : allowed ? `Pay ${tier.short}` : "Downgrade locked"}
+            </ActionButton>
+          </article>
+        );
+      })}
+
+      {pick ? (
+        <div className="pay-mask">
+          <div className="pay-sheet">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+              Confirm payment
+            </p>
+            <h2 className="mt-2 text-2xl">{TIERS[pick].name}</h2>
+            <p className="mt-2 text-sm text-muted">
+              {formatPrice(TIERS[pick].priceHealth)} leaves this wallet. Care
+              Quota fills to 100%. This cannot be undone from a mis-tap.
+            </p>
+            {step === "ask" ? (
+              <div className="mt-6 grid gap-2">
+                <ActionButton
+                  variant="primary"
+                  onClick={() => setStep("slide")}
+                >
+                  Confirm payment
+                </ActionButton>
+                <ActionButton variant="ghost" onClick={() => setPick(null)}>
+                  Cancel
+                </ActionButton>
+              </div>
+            ) : (
+              <div className="mt-6">
+                {busy ? (
+                  <p className="text-sm text-muted">Taking payment</p>
+                ) : (
+                  <PaySlide
+                    label="Slide left to pay"
+                    onConfirm={() => pay(pick)}
+                  />
+                )}
+                <ActionButton
+                  className="mt-4"
+                  variant="ghost"
+                  onClick={() => setPick(null)}
+                  disabled={busy}
+                >
+                  Cancel
+                </ActionButton>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

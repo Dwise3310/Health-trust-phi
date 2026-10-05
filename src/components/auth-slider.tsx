@@ -36,6 +36,7 @@ export function AuthSlider() {
   const [emailVerified, setEmailVerified] = useState(false);
   const [otpOpen, setOtpOpen] = useState(false);
   const [demoCode, setDemoCode] = useState("5665");
+  const [referredBy, setReferredBy] = useState("");
 
   const [resetEmail, setResetEmail] = useState("");
 
@@ -154,7 +155,7 @@ export function AuthSlider() {
       email: upEmail,
       password: upPassword,
       options: {
-        data: { full_name: name, phone },
+        data: { full_name: name, phone, referred_by: referredBy.trim() },
         emailRedirectTo: `${origin}/auth/callback`,
       },
     });
@@ -166,7 +167,7 @@ export function AuthSlider() {
     if (supabase) {
       await supabase.auth.updateUser({
         password: upPassword,
-        data: { full_name: name, phone },
+        data: { full_name: name, phone, referred_by: referredBy.trim() },
       });
     }
     stop();
@@ -299,13 +300,20 @@ export function AuthSlider() {
             </div>
             <div className="field-group">
               <input
-                required
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 autoComplete="tel"
                 inputMode="tel"
               />
               <span className="field-notch">Phone</span>
+            </div>
+            <div className="field-group">
+              <input
+                value={referredBy}
+                onChange={(e) => setReferredBy(e.target.value)}
+                autoComplete="off"
+              />
+              <span className="field-notch">Referral code (optional)</span>
             </div>
             <div className="field-group">
               <input

@@ -35,10 +35,7 @@ export default function UpdatesPage() {
         </p>
         <div className="mt-10 grid gap-4">
           {POSTS.map((p) => (
-            <article
-              key={p.title}
-              className="rounded-2xl border border-border bg-card p-5"
-            >
+            <article key={p.title} className="util-row">
               <p className="text-xs uppercase tracking-wide text-primary">
                 {p.kind}
               </p>

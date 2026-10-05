@@ -50,8 +50,8 @@ export const MISSIONS: Mission[] = [
   },
   {
     id: "refer",
-    title: "Copy your referral code",
-    body: "Share the code from Referrals. Cashback lands when they subscribe.",
+    title: "Bring a member",
+    body: "Someone must create an account with your referral code.",
     reward: 5,
   },
 ];
