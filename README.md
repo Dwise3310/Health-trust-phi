@@ -4,7 +4,7 @@ Independent web app for Sure Health at Eastern Ryse Specialist Hospital, sponsor
 
 Stack: Next.js on Vercel, Supabase for auth and data. Email and password
 sign in is live. Google sign in is on the form; connect the Google client
-in Supabase Auth when the hospital keys are ready.
+in Supabase Auth whenn the hospital keys are ready.
 
 ## Local
 
