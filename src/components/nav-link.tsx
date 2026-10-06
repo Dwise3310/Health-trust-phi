@@ -9,6 +9,7 @@ type Props = LinkProps & {
   children: ReactNode;
   className?: string;
   onClick?: () => void;
+  press?: boolean;
 };
 
 function pathOf(href: LinkProps["href"]) {
@@ -16,7 +17,14 @@ function pathOf(href: LinkProps["href"]) {
   return href.pathname || "/";
 }
 
-export function NavLink({ children, className, onClick, href, ...props }: Props) {
+export function NavLink({
+  children,
+  className,
+  onClick,
+  href,
+  press = true,
+  ...props
+}: Props) {
   const { start } = useLoading();
   const pathname = usePathname();
 
@@ -24,7 +32,7 @@ export function NavLink({ children, className, onClick, href, ...props }: Props)
     <Link
       href={href}
       {...props}
-      className={`btn-press ${className ?? ""}`}
+      className={`${press ? "btn-press " : ""}${className ?? ""}`}
       onClick={() => {
         const next = pathOf(href);
         if (next !== pathname) start("Opening page");

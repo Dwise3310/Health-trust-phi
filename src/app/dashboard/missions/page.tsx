@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ActionButton } from "@/components/action-button";
 import { useLoading } from "@/components/loading-provider";
+import { PageHeader, StatusChip } from "@/components/ui";
 import { useToast } from "@/components/toast";
 import { MISSIONS } from "@/lib/missions";
 import { createClient } from "@/lib/supabase/client";
@@ -14,7 +15,7 @@ export default function MissionsPage() {
   const [done, setDone] = useState<string[]>([]);
   const [ready, setReady] = useState<Record<string, boolean>>({});
 
-  async function inspect(userId: string) {
+  const inspect = useCallback(async (userId: string) => {
     const supabase = createClient();
     if (!supabase) return;
     const { data: claimed } = await supabase
@@ -68,7 +69,7 @@ export default function MissionsPage() {
       share: Boolean(codes && codes.length),
       refer: Boolean(refs && refs.length),
     });
-  }
+  }, []);
 
   useEffect(() => {
     const supabase = createClient();
@@ -78,7 +79,7 @@ export default function MissionsPage() {
       setUid(data.user.id);
       void inspect(data.user.id);
     });
-  }, []);
+  }, [inspect]);
 
   async function claim(id: string) {
     const supabase = createClient();
@@ -99,42 +100,37 @@ export default function MissionsPage() {
   }
 
   return (
-    <main className="grid gap-2">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-          Missions
-        </p>
-        <h1 className="mt-1 text-3xl">Small acts, Health back</h1>
-        <p className="mt-2 text-sm text-muted">
-          The desk checks the real record. An unfinished task will not pay.
-        </p>
-      </div>
-      <ul className="grid gap-2">
+    <main className="grid gap-8">
+      <PageHeader eyebrow="Account" title="Missions">
+        The desk checks the real record. An unfinished task will not pay.
+      </PageHeader>
+
+      <ul className="rows">
         {MISSIONS.map((m) => {
           const claimed = done.includes(m.id);
           const open = Boolean(ready[m.id]);
           return (
-            <li key={m.id} className="desk-block">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h2 className="text-lg">{m.title}</h2>
-                  <p className="mt-1 text-sm text-muted">{m.body}</p>
-                  <p className="mt-1 text-xs text-muted">
-                    {claimed ? "Claimed" : open ? "Ready to claim" : "Not finished"}
-                  </p>
+            <li key={m.id} className="flex flex-wrap items-start justify-between gap-4">
+              <div className="min-w-0">
+                <h2 className="text-lg">{m.title}</h2>
+                <p className="mt-1 text-sm text-muted">{m.body}</p>
+                <div className="mt-2">
+                  <StatusChip
+                    label={claimed ? "Claimed" : open ? "Ready to claim" : "Not finished"}
+                    tone={claimed ? "ok" : open ? "warn" : "muted"}
+                  />
                 </div>
-                <p className="shrink-0 text-sm font-semibold text-primary">
-                  +{m.reward} H
-                </p>
               </div>
-              <ActionButton
-                className="mt-4"
-                variant={claimed || !open ? "secondary" : "primary"}
-                disabled={claimed || !open}
-                onClick={() => claim(m.id)}
-              >
-                {claimed ? "Claimed" : open ? "Claim reward" : "Locked"}
-              </ActionButton>
+              <div className="grid shrink-0 justify-items-end gap-2">
+                <p className="text-sm font-semibold text-primary">+{m.reward} Health</p>
+                <ActionButton
+                  variant={claimed || !open ? "secondary" : "primary"}
+                  disabled={claimed || !open}
+                  onClick={() => claim(m.id)}
+                >
+                  {claimed ? "Claimed" : open ? "Claim reward" : "Locked"}
+                </ActionButton>
+              </div>
             </li>
           );
         })}

@@ -1,14 +1,21 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Copy } from "lucide-react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { ActionButton } from "@/components/action-button";
+import { useLoading } from "@/components/loading-provider";
 import { NavLink } from "@/components/nav-link";
+import { PageHeader, Segmented, StatusChip, statusTone } from "@/components/ui";
 import { useToast } from "@/components/toast";
-import { HEALTH_TO_NAIRA, TIERS, type TierId } from "@/lib/constants";
+import {
+  HEALTH_TO_NAIRA,
+  KIND_LABELS,
+  TEST_FAUCET,
+  TIERS,
+  type TierId,
+} from "@/lib/constants";
 import { formatHealth, formatNaira, formatWhen, nairaFromHealth } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
-import { useLoading } from "@/components/loading-provider";
 
 type Fx = { usd: number; eur: number; asOf: string };
 type Code = {
@@ -29,6 +36,20 @@ type Sub = {
   next_refresh_at: string;
 };
 type Currency = "health" | "ngn" | "usd" | "eur";
+type Tab = "overview" | "codes" | "activity";
+
+const CURRENCIES: { id: Currency; label: string }[] = [
+  { id: "health", label: "Health" },
+  { id: "ngn", label: "NGN" },
+  { id: "usd", label: "USD" },
+  { id: "eur", label: "EUR" },
+];
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: "overview", label: "Overview" },
+  { id: "codes", label: "Care codes" },
+  { id: "activity", label: "Activity" },
+];
 
 export default function WalletPage() {
   const { toast } = useToast();
@@ -41,56 +62,56 @@ export default function WalletPage() {
   const [tx, setTx] = useState<Tx[]>([]);
   const [fx, setFx] = useState<Fx | null>(null);
   const [view, setView] = useState<Currency>("health");
+  const [tab, setTab] = useState<Tab>("overview");
   const [percent, setPercent] = useState("5");
 
   const naira = nairaFromHealth(balance);
   const display = useMemo(() => {
     if (view === "health") return formatHealth(balance);
     if (view === "ngn") return formatNaira(naira);
-    if (!fx) return "Live FX loading";
+    if (!fx) return "Loading rate";
     if (view === "usd")
-      return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
-        naira * fx.usd,
-      );
-    return new Intl.NumberFormat("en-EU", { style: "currency", currency: "EUR" }).format(
-      naira * fx.eur,
-    );
+      return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(naira * fx.usd);
+    return new Intl.NumberFormat("en-GB", { style: "currency", currency: "EUR" }).format(naira * fx.eur);
   }, [view, balance, naira, fx]);
 
-  async function load(userId: string) {
-    const supabase = createClient();
-    if (!supabase) return;
-    const { data: wallet, error: walletErr } = await supabase
-      .from("wallets")
-      .select("health_balance, account_number")
-      .eq("user_id", userId)
-      .maybeSingle();
-    if (walletErr) toast(walletErr.message);
-    if (wallet) {
-      setBalance(Number(wallet.health_balance || 0));
-      setAccount(wallet.account_number);
-    }
-    const { data: row } = await supabase
-      .from("subscriptions")
-      .select("tier, started_at, expires_at, quota_percent, quota_remaining, next_refresh_at")
-      .eq("user_id", userId)
-      .eq("active", true)
-      .maybeSingle();
-    setSub((row as Sub) || null);
-    const { data: codeRows } = await supabase
-      .from("care_codes")
-      .select("id, code, allocated_percent, remaining_percent, status, created_at")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
-    setCodes((codeRows as Code[]) || []);
-    const { data: history } = await supabase
-      .from("wallet_tx")
-      .select("id, amount, kind, note, created_at")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(30);
-    setTx((history as Tx[]) || []);
-  }
+  const load = useCallback(
+    async (userId: string) => {
+      const supabase = createClient();
+      if (!supabase) return;
+      const { data: wallet, error: walletErr } = await supabase
+        .from("wallets")
+        .select("health_balance, account_number")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (walletErr) toast(walletErr.message);
+      if (wallet) {
+        setBalance(Number(wallet.health_balance || 0));
+        setAccount(wallet.account_number);
+      }
+      const { data: row } = await supabase
+        .from("subscriptions")
+        .select("tier, started_at, expires_at, quota_percent, quota_remaining, next_refresh_at")
+        .eq("user_id", userId)
+        .eq("active", true)
+        .maybeSingle();
+      setSub((row as Sub) || null);
+      const { data: codeRows } = await supabase
+        .from("care_codes")
+        .select("id, code, allocated_percent, remaining_percent, status, created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      setCodes((codeRows as Code[]) || []);
+      const { data: history } = await supabase
+        .from("wallet_tx")
+        .select("id, amount, kind, note, created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(30);
+      setTx((history as Tx[]) || []);
+    },
+    [toast],
+  );
 
   useEffect(() => {
     fetch("/api/fx")
@@ -106,7 +127,7 @@ export default function WalletPage() {
       setUid(data.user.id);
       void load(data.user.id);
     });
-  }, []);
+  }, [load]);
 
   async function credit(amount: number) {
     const supabase = createClient();
@@ -135,11 +156,11 @@ export default function WalletPage() {
       return;
     }
     if (!sub) {
-      toast("Buy a membership first, then issue a Care Quota code.");
+      toast("Choose a plan first, then issue a Care Quota code.");
       return;
     }
     if (slice > Number(sub.quota_remaining)) {
-      toast("That slice is bigger than remaining Care Quota.");
+      toast("That slice is bigger than the Care Quota you have left.");
       return;
     }
     start("Issuing code");
@@ -178,199 +199,195 @@ export default function WalletPage() {
 
   const plan = sub ? TIERS[sub.tier] : null;
   const used = sub ? Number(sub.quota_percent) - Number(sub.quota_remaining) : 0;
+  const remaining = sub ? Math.max(0, Math.min(100, Number(sub.quota_remaining))) : 0;
+  const visibleTx = tx.filter((row) => TEST_FAUCET || row.kind !== "test_credit");
 
   return (
-    <main className="grid gap-2">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-          Wallet
-        </p>
-        <h1 className="mt-1 text-3xl">Health on your name</h1>
-      </div>
+    <main className="grid gap-6">
+      <PageHeader eyebrow="Money" title="Your Health wallet" />
 
-      <section className="desk-block">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+      <section className="grid gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted">Balance</p>
-          <div className="flex gap-1 text-xs">
-            {(
-              [
-                ["health", "Health"],
-                ["ngn", "NGN"],
-                ["usd", "USD"],
-                ["eur", "EUR"],
-              ] as const
-            ).map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setView(id)}
-                className={`px-2.5 py-1 ${
-                  view === id ? "text-primary" : "text-muted"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <Segmented label="Show balance in" value={view} options={CURRENCIES} onChange={setView} />
         </div>
-        <p className="mt-3 font-serif text-4xl tabular-nums">{display}</p>
-        <p className="mt-2 text-sm text-muted">
-          1 Health is ₦{HEALTH_TO_NAIRA} (fixed). USD and EUR use live naira
-          rates from ExchangeRate-API (open.er-api.com), refreshed every 30
-          minutes{fx ? `. Last print ${fx.asOf}` : ""}.
+        <p className="font-serif text-4xl tabular-nums">{display}</p>
+        <p className="text-sm text-muted">
+          1 Health is ₦{HEALTH_TO_NAIRA}, fixed. USD and EUR use live naira rates
+          {fx ? `, last updated ${fx.asOf}` : ""}.
         </p>
+        <div className="flex flex-wrap gap-3">
+          <NavLink href="/dashboard/withdraw" className="rounded-full border border-border px-4 py-2 text-sm font-semibold">
+            Withdraw
+          </NavLink>
+          <NavLink href="/dashboard/appointments" className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-fg">
+            Book a visit
+          </NavLink>
+        </div>
       </section>
 
-      <section className="desk-block">
-        <p className="text-sm text-muted">Current plan</p>
-        {plan && sub ? (
-          <div className="mt-2 grid gap-2">
-            <h2 className="text-2xl">{plan.name}</h2>
-            <p className="text-sm text-muted">{plan.quotaHint}</p>
-            <p className="text-sm">
-              {plan.durationMonths} months · queue rank {plan.queue} ·{" "}
-              {plan.refreshes} quota refreshes
+      <Segmented label="Wallet sections" value={tab} options={TABS} onChange={setTab} />
+
+      {tab === "overview" ? (
+        <div className="split" style={{ "--cols": 2 } as React.CSSProperties}>
+          <section className="grid content-start gap-3">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg">Your plan</h2>
+              {plan ? <StatusChip label="Active" tone="ok" /> : null}
+            </div>
+            {plan && sub ? (
+              <>
+                <p className="text-xl font-semibold">{plan.name}</p>
+                <p className="text-sm text-muted">
+                  Active until {new Date(sub.expires_at).toLocaleDateString("en-NG")}. Next Care Quota refresh{" "}
+                  {new Date(sub.next_refresh_at).toLocaleDateString("en-NG")}.
+                </p>
+                <div>
+                  <div className="flex items-baseline justify-between text-sm">
+                    <span>Care Quota left</span>
+                    <span className="font-semibold tabular-nums">{remaining}%</span>
+                  </div>
+                  <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-border" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={remaining} aria-label="Care Quota remaining">
+                    <div className="h-full rounded-full bg-primary" style={{ width: `${remaining}%` }} />
+                  </div>
+                  <p className="mt-2 text-xs text-muted">{used}% already shared out as codes.</p>
+                </div>
+                {sub.tier !== "prime" ? (
+                  <NavLink href="/dashboard/membership" className="text-sm font-semibold text-primary">
+                    See upgrade options
+                  </NavLink>
+                ) : null}
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-muted">No plan yet. A plan starts your Care Quota for consultations and diagnosis.</p>
+                <NavLink href="/dashboard/membership" className="text-sm font-semibold text-primary">
+                  Choose a plan
+                </NavLink>
+              </>
+            )}
+          </section>
+
+          <section className="grid content-start gap-3">
+            <h2 className="text-lg">Funding account</h2>
+            <p className="font-mono text-lg tracking-wide break-all">
+              {account || "Preparing your account number"}
             </p>
-            <p className="text-sm">
-              Active {formatWhen(sub.started_at)} · ends{" "}
-              {new Date(sub.expires_at).toLocaleDateString("en-NG")}
+            <p className="text-sm text-muted">
+              Pay into this number from any Nigerian bank. It stays yours. 1 Health is ₦{HEALTH_TO_NAIRA}.
             </p>
-            <p className="text-sm">
-              Care Quota {Number(sub.quota_remaining)}% remaining of{" "}
-              {Number(sub.quota_percent)}% · {used}% already allocated · next
-              refresh {new Date(sub.next_refresh_at).toLocaleDateString("en-NG")}
-            </p>
-            <ul className="mt-1 grid gap-1 text-sm text-muted">
-              {plan.perks.map((p) => (
-                <li key={p}>{p}</li>
+            {TEST_FAUCET ? (
+              <div className="mt-2 grid gap-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+                  Test mode
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {[50, 100, 250].map((n) => (
+                    <ActionButton key={n} variant="secondary" size="sm" onClick={() => credit(n)}>
+                      Test +{n} Health
+                    </ActionButton>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </section>
+        </div>
+      ) : null}
+
+      {tab === "codes" ? (
+        <div className="grid gap-4">
+          <section className="grid gap-4">
+            <div>
+              <h2 className="text-lg">Share cover with family</h2>
+              <p className="mt-1 text-sm text-muted">
+                Issue a Care Quota code as a slice of your cover. You cannot give out more than you have left.
+                {sub ? ` You have ${remaining}% left.` : " You need a plan first."}
+              </p>
+            </div>
+            <form onSubmit={issueCode} className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+              <label className="grid gap-1.5 text-sm">
+                Percent to allocate
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={percent}
+                  onChange={(e) => setPercent(e.target.value)}
+                  className="rounded-xl border border-border bg-bg px-3 py-2.5"
+                />
+              </label>
+              <ActionButton type="submit" variant="primary" disabled={!sub}>
+                Issue code
+              </ActionButton>
+            </form>
+          </section>
+
+          {codes.length === 0 ? (
+            <p className="text-sm text-muted">No codes yet. Codes you issue will appear here.</p>
+          ) : (
+            <ul className="rows">
+              {codes.map((c) => {
+                const usedPct = Number(c.allocated_percent) - Number(c.remaining_percent);
+                return (
+                  <li key={c.code} className="grid gap-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <p className="font-mono text-lg">{c.code}</p>
+                        <button
+                          type="button"
+                          className="copy-btn"
+                          onClick={() => copyCode(c.code)}
+                          aria-label={`Copy code ${c.code}`}
+                        >
+                          <Copy className="size-3.5" />
+                        </button>
+                      </div>
+                      <StatusChip label={c.status} tone={statusTone(c.status)} />
+                    </div>
+                    <p className="text-sm">
+                      {usedPct}% used of {c.allocated_percent}% allocated · {c.remaining_percent}% still on this code
+                    </p>
+                    <p className="text-xs text-muted">Issued {formatWhen(c.created_at)}</p>
+                    {c.status === "active" ? (
+                      <div>
+                        <ActionButton variant="ghost" size="sm" onClick={() => cancelCode(c.code)}>
+                          Cancel code and return quota
+                        </ActionButton>
+                      </div>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      ) : null}
+
+      {tab === "activity" ? (
+        <section className="">
+          {visibleTx.length === 0 ? (
+            <p className="text-sm text-muted">No movement yet. Deposits, plans, and withdrawals appear here.</p>
+          ) : (
+            <ul className="grid divide-y divide-border">
+              {visibleTx.map((row) => (
+                <li key={row.id} className="flex items-start justify-between gap-4 py-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold">
+                      {KIND_LABELS[row.kind] || row.kind.replaceAll("_", " ")}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted">{formatWhen(row.created_at)}</p>
+                    <p className="mt-1 text-sm text-muted">{row.note || "Wallet movement"}</p>
+                  </div>
+                  <p className={`shrink-0 font-semibold tabular-nums ${row.amount < 0 ? "text-fg" : "text-ok"}`}>
+                    {row.amount > 0 ? "+" : ""}
+                    {row.amount} Health
+                  </p>
+                </li>
               ))}
             </ul>
-            {sub.tier !== "prime" ? (
-              <NavLink
-                href="/dashboard/membership"
-                className="mt-2 inline-block text-sm font-semibold text-primary"
-              >
-                Upgrade plan
-              </NavLink>
-            ) : null}
-          </div>
-        ) : (
-          <p className="mt-2 text-sm text-muted">
-            No plan yet.{" "}
-            <NavLink href="/dashboard/membership" className="font-semibold text-primary">
-              Choose Base, Plus, or Prime
-            </NavLink>
-          </p>
-        )}
-      </section>
-
-      <section className="desk-block">
-        <h2 className="text-xl">Funding account</h2>
-        <p className="mt-2 font-mono text-lg tracking-wide">
-          {account || "Preparing your account number"}
-        </p>
-        <p className="mt-2 text-sm text-muted">
-          This number is yours for life. Pay into it from any Nigerian bank.
-          1 Health is ₦100.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {[50, 100, 250].map((n) => (
-            <ActionButton
-              key={n}
-              variant="secondary"
-              size="sm"
-              onClick={() => credit(n)}
-            >
-              Test +{n} Health
-            </ActionButton>
-          ))}
-        </div>
-      </section>
-
-      <section className="desk-block">
-        <h2 className="text-xl">Care Quota codes</h2>
-        <p className="mt-1 text-sm text-muted">
-          Remaining cover {sub ? `${sub.quota_remaining}% of 100%` : "needs a plan"}.
-        </p>
-        <form onSubmit={issueCode} className="mt-4 grid gap-3">
-          <label className="grid gap-1.5 text-sm">
-            Percent to allocate
-            <input
-              type="number"
-              min={1}
-              max={100}
-              value={percent}
-              onChange={(e) => setPercent(e.target.value)}
-              className="rounded-xl border border-border bg-bg px-3 py-2.5"
-            />
-          </label>
-          <ActionButton type="submit" variant="primary">
-            Issue Care Quota code
-          </ActionButton>
-        </form>
-        <ul className="mt-5 grid gap-5">
-          {codes.map((c) => {
-            const usedPct = Number(c.allocated_percent) - Number(c.remaining_percent);
-            return (
-              <li key={c.code}>
-                <div className="flex items-center gap-2">
-                  <p className="font-mono text-lg">{c.code}</p>
-                  <button
-                    type="button"
-                    className="copy-btn"
-                    onClick={() => copyCode(c.code)}
-                    aria-label="Copy code"
-                  >
-                    <Copy className="size-3.5" />
-                  </button>
-                </div>
-                <p className="mt-1 text-sm text-muted">
-                  Issued {formatWhen(c.created_at)} · {c.status}
-                </p>
-                <p className="mt-1 text-sm">
-                  {usedPct}% used of {c.allocated_percent}% allocated ·{" "}
-                  {c.remaining_percent}% still on this code
-                </p>
-                {c.status === "active" ? (
-                  <ActionButton
-                    className="mt-2"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => cancelCode(c.code)}
-                  >
-                    Cancel code
-                  </ActionButton>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-
-      <section className="desk-block">
-        <h2 className="text-xl">Activity</h2>
-        <ul className="mt-3 grid gap-4">
-          {tx.length === 0 ? (
-            <li className="text-sm text-muted">No movement yet.</li>
-          ) : (
-            tx.map((row) => (
-              <li key={row.id}>
-                <p className="text-sm font-semibold capitalize">
-                  {row.kind.replaceAll("_", " ")}
-                </p>
-                <p className="mt-1 text-sm text-muted">
-                  {formatWhen(row.created_at)}
-                </p>
-                <p className="mt-1 text-sm">{row.note || "Wallet movement"}</p>
-                <p className="mt-1 tabular-nums">
-                  {row.amount > 0 ? "+" : ""}
-                  {row.amount} Health
-                </p>
-              </li>
-            ))
           )}
-        </ul>
-      </section>
+        </section>
+      ) : null}
     </main>
   );
 }

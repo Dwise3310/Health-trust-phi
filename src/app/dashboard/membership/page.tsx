@@ -1,12 +1,13 @@
 "use client";
 
+import { Check, Lock } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ActionButton } from "@/components/action-button";
-import { PaySlide } from "@/components/pay-slide";
 import { useLoading } from "@/components/loading-provider";
+import { PageHeader, StatusChip } from "@/components/ui";
 import { useToast } from "@/components/toast";
 import { TIERS, type TierId } from "@/lib/constants";
-import { formatPrice } from "@/lib/utils";
+import { formatHealth, formatNaira, nairaFromHealth } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 
 const ORDER: TierId[] = ["base", "plus", "prime"];
@@ -21,7 +22,6 @@ export default function MembershipPage() {
   const [balance, setBalance] = useState(0);
   const [sub, setSub] = useState<Sub | null>(null);
   const [pick, setPick] = useState<TierId | null>(null);
-  const [step, setStep] = useState<"ask" | "slide">("ask");
   const [busy, setBusy] = useState(false);
 
   async function load(userId: string) {
@@ -52,10 +52,16 @@ export default function MembershipPage() {
     });
   }, []);
 
-  function canBuy(id: TierId) {
-    if (!sub) return true;
-    if (new Date(sub.expires_at) <= new Date()) return true;
-    return RANK[id] > RANK[sub.tier];
+  const live = Boolean(sub && new Date(sub.expires_at) > new Date());
+
+  // Same rule as the database: while a plan is live you can only move up.
+  function lockReason(id: TierId): string | null {
+    if (!sub || !live) return null;
+    if (sub.tier === id) return null;
+    if (RANK[id] < RANK[sub.tier]) {
+      return `You can move up while ${TIERS[sub.tier].name} is live. Lower plans open when it ends.`;
+    }
+    return null;
   }
 
   async function pay(id: TierId) {
@@ -76,102 +82,123 @@ export default function MembershipPage() {
   }
 
   return (
-    <main className="grid gap-2">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-          Membership
-        </p>
-        <h1 className="mt-1 text-3xl">Choose Base, Plus, or Prime</h1>
-        <p className="mt-2 text-sm text-muted">
-          Paid from your Health wallet. You have {balance} Health. You can
-          upgrade while a plan is live. You cannot step down until it ends.
-        </p>
+    <main className="grid gap-6">
+      <PageHeader eyebrow="Care" title="Choose a plan">
+        Plans are paid from your Health wallet. You have {formatHealth(balance)} (about{" "}
+        {formatNaira(nairaFromHealth(balance))}). You can move up while a plan is live. You
+        cannot move down until it ends.
+      </PageHeader>
+
+      <div className="split" style={{ "--cols": 3 } as React.CSSProperties}>
+        {ORDER.map((id) => {
+          const tier = TIERS[id];
+          const current = sub?.tier === id && live;
+          const reason = lockReason(id);
+          const affordable = balance >= tier.priceHealth;
+          return (
+            <article
+              key={id}
+              className="flex flex-col gap-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-xl">{tier.name}</h2>
+                  <p className="mt-1 text-sm text-muted">{tier.quotaHint}</p>
+                </div>
+                {current ? <StatusChip label="Your plan" tone="ok" /> : null}
+              </div>
+
+              <div>
+                <p className="font-serif text-3xl tabular-nums">{tier.priceHealth} Health</p>
+                <p className="text-sm text-muted">about {formatNaira(nairaFromHealth(tier.priceHealth))}</p>
+              </div>
+
+              <dl className="grid grid-cols-2 gap-3 border-y border-border py-3 text-sm">
+                <div>
+                  <dt className="text-xs text-muted">Duration</dt>
+                  <dd className="font-semibold">{tier.durationMonths} months</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted">Queue rank</dt>
+                  <dd className="font-semibold">{tier.queue === 1 ? "First" : tier.queue === 2 ? "Second" : "Third"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted">Care Quota</dt>
+                  <dd className="font-semibold">100% on purchase</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted">Quota refreshes</dt>
+                  <dd className="font-semibold">{tier.refreshes} times</dd>
+                </div>
+              </dl>
+
+              <ul className="grid gap-2 text-sm">
+                {tier.perks.map((p) => (
+                  <li key={p} className="flex items-start gap-2">
+                    <Check className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+                    <span>{p}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="mt-auto grid gap-2">
+                {current ? (
+                  <ActionButton variant="secondary" disabled>
+                    Current plan
+                  </ActionButton>
+                ) : reason ? (
+                  <>
+                    <ActionButton variant="secondary" disabled>
+                      <Lock className="size-4" aria-hidden /> Locked for now
+                    </ActionButton>
+                    <p className="text-xs text-muted">{reason}</p>
+                  </>
+                ) : (
+                  <>
+                    <ActionButton
+                      variant="primary"
+                      onClick={() => {
+                        if (!affordable) {
+                          toast(`You need ${tier.priceHealth - balance} more Health. Fund your wallet first.`);
+                          return;
+                        }
+                        setPick(id);
+                      }}
+                    >
+                      {affordable ? `Pay ${tier.priceHealth} Health` : `Need ${tier.priceHealth - balance} more Health`}
+                    </ActionButton>
+                    {!affordable ? (
+                      <p className="text-xs text-muted">Fund your wallet to unlock this plan.</p>
+                    ) : null}
+                  </>
+                )}
+              </div>
+            </article>
+          );
+        })}
       </div>
 
-      {ORDER.map((id) => {
-        const tier = TIERS[id];
-        const on = sub?.tier === id;
-        const allowed = canBuy(id);
-        return (
-          <article key={id} className="desk-block">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-xl">{tier.name}</h2>
-                <p className="mt-1 text-sm text-muted">{tier.quotaHint}</p>
-              </div>
-              <p className="text-sm font-semibold">{formatPrice(tier.priceHealth)}</p>
-            </div>
-            <p className="mt-2 text-xs text-muted">
-              {tier.durationMonths} months · queue rank {tier.queue} · Care Quota
-              starts at 100%
-            </p>
-            <ul className="mt-3 grid gap-1 text-sm text-muted">
-              {tier.perks.map((p) => (
-                <li key={p}>{p}</li>
-              ))}
-            </ul>
-            <ActionButton
-              className="mt-4"
-              variant={on ? "secondary" : "primary"}
-              disabled={on || !allowed}
-              onClick={() => {
-                if (balance < tier.priceHealth) {
-                  toast("Not enough Health. Add some in Wallet first.");
-                  return;
-                }
-                setPick(id);
-                setStep("ask");
-              }}
-            >
-              {on ? "Current plan" : allowed ? `Pay ${tier.short}` : "Downgrade locked"}
-            </ActionButton>
-          </article>
-        );
-      })}
-
       {pick ? (
-        <div className="pay-mask">
+        <div className="pay-mask" role="dialog" aria-modal="true" aria-labelledby="confirm-plan">
           <div className="pay-sheet">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-              Confirm payment
+              Confirm plan
             </p>
-            <h2 className="mt-2 text-2xl">{TIERS[pick].name}</h2>
-            <p className="mt-2 text-sm text-muted">
-              {formatPrice(TIERS[pick].priceHealth)} leaves this wallet. Care
-              Quota fills to 100%. This cannot be undone from a mis-tap.
+            <h2 id="confirm-plan" className="mt-2 text-2xl">
+              {TIERS[pick].name}
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-muted">
+              {TIERS[pick].priceHealth} Health (about {formatNaira(nairaFromHealth(TIERS[pick].priceHealth))})
+              leaves your wallet. Your Care Quota is set to 100%. Your current plan, if any, is replaced.
             </p>
-            {step === "ask" ? (
-              <div className="mt-6 grid gap-2">
-                <ActionButton
-                  variant="primary"
-                  onClick={() => setStep("slide")}
-                >
-                  Confirm payment
-                </ActionButton>
-                <ActionButton variant="ghost" onClick={() => setPick(null)}>
-                  Cancel
-                </ActionButton>
-              </div>
-            ) : (
-              <div className="mt-6">
-                {busy ? (
-                  <p className="text-sm text-muted">Taking payment</p>
-                ) : (
-                  <PaySlide
-                    label="Slide left to pay"
-                    onConfirm={() => pay(pick)}
-                  />
-                )}
-                <ActionButton
-                  className="mt-4"
-                  variant="ghost"
-                  onClick={() => setPick(null)}
-                  disabled={busy}
-                >
-                  Cancel
-                </ActionButton>
-              </div>
-            )}
+            <div className="mt-6 grid gap-2">
+              <ActionButton variant="primary" onClick={() => pay(pick)} disabled={busy}>
+                {busy ? "Taking payment" : "Confirm and pay"}
+              </ActionButton>
+              <ActionButton variant="ghost" onClick={() => setPick(null)} disabled={busy}>
+                Cancel
+              </ActionButton>
+            </div>
           </div>
         </div>
       ) : null}

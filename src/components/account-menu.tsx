@@ -45,7 +45,7 @@ export function AccountMenu({
       {open ? (
         <div className="absolute right-0 top-12 z-50 w-52 rounded-2xl border border-border bg-card p-2 shadow-lg">
           <Link
-            href="/dashboard"
+            href="/dashboard/profile"
             className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm"
             onClick={() => setOpen(false)}
           >

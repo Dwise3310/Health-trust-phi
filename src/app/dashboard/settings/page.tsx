@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { ActionButton } from "@/components/action-button";
 import { NavLink } from "@/components/nav-link";
+import { PageHeader } from "@/components/ui";
 import { useToast } from "@/components/toast";
 import { createClient } from "@/lib/supabase/client";
 
@@ -87,85 +88,80 @@ export default function SettingsPage() {
   }
 
   return (
-    <main className="grid gap-5">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-          Settings
-        </p>
-        <h1 className="mt-1 text-3xl">Desk controls</h1>
-        <p className="mt-2 text-sm text-muted">
-          Username is permanent once saved. Theme lives in this browser. Account
-          sign out is on the avatar, not on this page.
-        </p>
+    <main className="grid gap-8">
+      <PageHeader eyebrow="Account" title="Settings">
+        Username is permanent once saved. Theme lives in this browser. Sign out is on the avatar.
+      </PageHeader>
+
+      <div className="split" style={{ "--cols": 2 } as React.CSSProperties}>
+        <form onSubmit={saveUsername} className="grid content-start gap-3">
+          <h2 className="text-lg">Public username</h2>
+          <label className="grid gap-1.5 text-sm">
+            Username
+            <input
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              disabled={locked}
+              minLength={3}
+              className="rounded-xl border border-border bg-bg px-3 py-2.5 disabled:opacity-60"
+            />
+          </label>
+          <ActionButton type="submit" variant="primary" disabled={locked}>
+            {locked ? "Username locked" : "Save username"}
+          </ActionButton>
+        </form>
+
+        <form onSubmit={savePrefs} className="grid content-start gap-3">
+          <h2 className="text-lg">Contact and alerts</h2>
+          <label className="grid gap-1.5 text-sm">
+            Phone
+            <input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="rounded-xl border border-border bg-bg px-3 py-2.5"
+            />
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={notifyEmail}
+              onChange={(e) => setNotifyEmail(e.target.checked)}
+            />
+            Email notices for bookings and wallet
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={notifySms}
+              onChange={(e) => setNotifySms(e.target.checked)}
+            />
+            SMS notices (when the SMS rail is live)
+          </label>
+          <ActionButton type="submit" variant="primary">
+            Save preferences
+          </ActionButton>
+        </form>
       </div>
 
-      <form onSubmit={saveUsername} className="desk-block grid gap-3">
-        <h2 className="text-xl">Public username</h2>
-        <label className="grid gap-1.5 text-sm">
-          Username
-          <input
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            disabled={locked}
-            minLength={3}
-            className="rounded-xl border border-border bg-bg px-3 py-2.5 disabled:opacity-60"
-          />
-        </label>
-        <ActionButton type="submit" variant="primary" disabled={locked}>
-          {locked ? "Username locked" : "Save username"}
-        </ActionButton>
-      </form>
-
-      <form onSubmit={savePrefs} className="desk-block grid gap-3">
-        <h2 className="text-xl">Contact and alerts</h2>
-        <label className="grid gap-1.5 text-sm">
-          Phone
-          <input
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="rounded-xl border border-border bg-bg px-3 py-2.5"
-          />
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={notifyEmail}
-            onChange={(e) => setNotifyEmail(e.target.checked)}
-          />
-          Email notices for bookings and wallet
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={notifySms}
-            onChange={(e) => setNotifySms(e.target.checked)}
-          />
-          SMS notices (when the SMS rail is live)
-        </label>
-        <ActionButton type="submit" variant="primary">
-          Save preferences
-        </ActionButton>
-      </form>
-
-      <section className="desk-block grid gap-3">
-        <h2 className="text-xl">Account</h2>
-        <p className="text-sm text-muted">
-          Login mail is held by the auth service. It is not shown as a raw
-          banner on the desk.
-        </p>
-        <ActionButton variant="secondary" onClick={sendReset}>
-          Send password reset
-        </ActionButton>
-        <p className="text-sm">
-          <NavLink href="/data-deletion" className="text-primary">
-            Request data deletion
-          </NavLink>
-        </p>
-        <p className="text-sm">
-          <NavLink href="/unsubscribe" className="text-primary">
-            Unsubscribe from marketing
-          </NavLink>
-        </p>
+      <section className="grid gap-3 border-t border-border pt-8">
+        <h2 className="text-lg">Account</h2>
+        <ul className="rows text-sm">
+          <li>
+            <ActionButton variant="secondary" onClick={sendReset}>
+              Send password reset
+            </ActionButton>
+          </li>
+          <li>
+            <NavLink href="/data-deletion" className="font-semibold text-primary">
+              Request data deletion
+            </NavLink>
+          </li>
+          <li>
+            <NavLink href="/unsubscribe" className="font-semibold text-primary">
+              Unsubscribe from marketing
+            </NavLink>
+          </li>
+        </ul>
       </section>
     </main>
   );

@@ -90,6 +90,26 @@ export const PHYSICAL_PRICES = [
 
 export const HEALTH_TO_NAIRA = 100;
 
+// Test-mode faucet. Set NEXT_PUBLIC_TEST_FAUCET=true only on test deployments.
+// Leave it unset at go-live so members cannot credit their own wallet.
+export const TEST_FAUCET = process.env.NEXT_PUBLIC_TEST_FAUCET === "true";
+
+export const KIND_LABELS: Record<string, string> = {
+  membership: "Membership",
+  product: "Pharmacy order",
+  card: "Appointment card",
+  visit: "Visit booked",
+  appointment: "Visit booked",
+  withdraw_request: "Withdrawal",
+  code_issue: "Care Quota code",
+  code_cancel: "Care Quota code cancelled",
+  care_code: "Care Quota code",
+  mission: "Mission reward",
+  referral_cashback: "Referral cashback",
+  deposit: "Deposit",
+  test_credit: "Test credit",
+};
+
 export const COVERED_UNDER_QUOTA = [
   "First consult with the assigned clinician",
   "Follow-up consult inside the same Care Quota window",
