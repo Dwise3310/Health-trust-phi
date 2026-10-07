@@ -169,7 +169,8 @@ set search_path = public
 as $$
 declare
   left_q numeric;
-  code text;
+  new_code text;
+  n int := 0;
 begin
   if auth.uid() is null then
     raise exception 'Not signed in';
@@ -191,12 +192,13 @@ begin
   end if;
 
   loop
-    code := 'SH-' || upper(substr(md5(random()::text || clock_timestamp()::text || auth.uid()::text), 1, 6));
-    exit when not exists (select 1 from public.care_codes where public.care_codes.code = code);
+    n := n + 1;
+    new_code := 'SH-' || upper(substr(md5(random()::text || clock_timestamp()::text || auth.uid()::text || n::text), 1, 6));
+    exit when not exists (select 1 from public.care_codes as c where c.code = new_code);
   end loop;
 
   insert into public.care_codes (user_id, code, allocated_percent, remaining_percent, status)
-  values (auth.uid(), code, p_percent, p_percent, 'active');
+  values (auth.uid(), new_code, p_percent, p_percent, 'active');
 
   update public.subscriptions
     set quota_remaining = quota_remaining - p_percent
@@ -207,10 +209,10 @@ begin
     auth.uid(),
     0,
     'care_code',
-    'Issued Care Quota code ' || code || ' · allocated ' || p_percent || '% of 100% · issued ' || to_char(now(), 'DD Mon YYYY HH24:MI')
+    'Issued Care Quota code ' || new_code || ' · allocated ' || p_percent || '% of 100% · issued ' || to_char(now(), 'DD Mon YYYY HH24:MI')
   );
 
-  return code;
+  return new_code;
 end;
 $$;
 

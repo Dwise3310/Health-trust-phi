@@ -241,9 +241,7 @@ export function AuthSlider() {
               <p className="text-sm text-muted">
                 Your wallet, Care Quota, cards, and pharmacy orders sit behind this door.
               </p>
-              <div className="flex gap-2">
-                <GoogleButton compact label="Continue with Google" onClick={() => google("in")} />
-              </div>
+              <GoogleButton label="Continue with Google" onClick={() => google("in")} />
               <p className="text-center text-[11px] uppercase tracking-[0.18em] text-muted">
                 or email
               </p>
@@ -289,9 +287,7 @@ export function AuthSlider() {
           <form className="grid gap-2.5" onSubmit={signUp}>
             <h2 className="text-2xl md:text-3xl">Create account</h2>
             <p className="text-sm text-muted">A wallet and Care Quota in your name.</p>
-            <div className="flex gap-2">
-              <GoogleButton compact label="Sign up with Google" onClick={() => google("up")} />
-            </div>
+            <GoogleButton label="Sign up with Google" onClick={() => google("up")} />
             <div className="grid grid-cols-2 gap-2">
               <div className="field-group">
                 <input
