@@ -38,13 +38,14 @@ Run these files in the Supabase SQL editor, in order, on a fresh project:
 3. `supabase/03-tables.sql`
 4. `supabase/04-rls.sql`
 5. `supabase/05-grants.sql`
+6. `supabase/06-logic.sql`
+7. `supabase/07-codes.sql`
 
 If login already works and features say `permission denied for table`, run
 **only** `supabase/05-grants.sql`. Do not re-run part 1.
 
-Then run `supabase/06-logic.sql`. That file sets Care Quota to 100% full,
-blocks plan downgrades while a plan is live, resets missions, and adds
-issue/cancel code, product, card, and visit money functions.
+If issuing a Care Quota code says `gen_random_bytes` does not exist, run
+**only** `supabase/07-codes.sql`.
 
 Sessions last 5 days of no visit. Opening the site again while the cookie is valid returns you to the member desk without another login.
 

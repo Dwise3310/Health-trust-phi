@@ -26,7 +26,8 @@ export function AuthSlider() {
   const [inPassword, setInPassword] = useState("");
   const [remember, setRemember] = useState(true);
 
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [upEmail, setUpEmail] = useState("");
   const [upPassword, setUpPassword] = useState("");
@@ -39,6 +40,8 @@ export function AuthSlider() {
   const [referredBy, setReferredBy] = useState("");
 
   const [resetEmail, setResetEmail] = useState("");
+
+  const fullName = `${firstName} ${lastName}`.trim();
 
   const confirmClass =
     confirm.length === 0
@@ -130,8 +133,17 @@ export function AuthSlider() {
     return true;
   }
 
+  async function openVerify() {
+    const msg = await sendCode();
+    if (msg !== null && upEmail.includes("@")) setOtpOpen(true);
+  }
+
   async function signUp(e: React.FormEvent) {
     e.preventDefault();
+    if (!fullName) {
+      toast("Enter your first and last name.");
+      return;
+    }
     if (!emailVerified) {
       toast("Verify your email first. Tap Send code.");
       return;
@@ -155,7 +167,7 @@ export function AuthSlider() {
       email: upEmail,
       password: upPassword,
       options: {
-        data: { full_name: name, phone, referred_by: referredBy.trim() },
+        data: { full_name: fullName, phone, referred_by: referredBy.trim() },
         emailRedirectTo: `${origin}/auth/callback`,
       },
     });
@@ -167,7 +179,7 @@ export function AuthSlider() {
     if (supabase) {
       await supabase.auth.updateUser({
         password: upPassword,
-        data: { full_name: name, phone, referred_by: referredBy.trim() },
+        data: { full_name: fullName, phone, referred_by: referredBy.trim() },
       });
     }
     stop();
@@ -229,10 +241,9 @@ export function AuthSlider() {
               <p className="text-sm text-muted">
                 Your wallet, Care Quota, cards, and pharmacy orders sit behind this door.
               </p>
-              <GoogleButton
-                label="Continue with Google"
-                onClick={() => google("in")}
-              />
+              <div className="flex gap-2">
+                <GoogleButton compact label="Continue with Google" onClick={() => google("in")} />
+              </div>
               <p className="text-center text-[11px] uppercase tracking-[0.18em] text-muted">
                 or email
               </p>
@@ -263,11 +274,7 @@ export function AuthSlider() {
                   />
                   Remember me
                 </label>
-                <ActionButton
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setPanel("forgot")}
-                >
+                <ActionButton variant="ghost" size="sm" onClick={() => setPanel("forgot")}>
                   Forgot password?
                 </ActionButton>
               </div>
@@ -278,42 +285,51 @@ export function AuthSlider() {
           )}
         </section>
 
-        <section className="form-panel sign-up-panel overflow-y-auto">
-          <form className="grid gap-3" onSubmit={signUp}>
-            <p className="text-sm text-muted">Join the hospital membership</p>
-            <h2 className="text-3xl">Create account</h2>
-            <GoogleButton
-              label="Sign up with Google"
-              onClick={() => google("up")}
-            />
-            <p className="text-center text-[11px] uppercase tracking-[0.18em] text-muted">
-              or email
-            </p>
-            <div className="field-group">
-              <input
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                autoComplete="name"
-              />
-              <span className="field-notch">Full name</span>
+        <section className="form-panel sign-up-panel">
+          <form className="grid gap-2.5" onSubmit={signUp}>
+            <h2 className="text-2xl md:text-3xl">Create account</h2>
+            <p className="text-sm text-muted">A wallet and Care Quota in your name.</p>
+            <div className="flex gap-2">
+              <GoogleButton compact label="Sign up with Google" onClick={() => google("up")} />
             </div>
-            <div className="field-group">
-              <input
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                autoComplete="tel"
-                inputMode="tel"
-              />
-              <span className="field-notch">Phone</span>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="field-group">
+                <input
+                  required
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  autoComplete="given-name"
+                />
+                <span className="field-notch">First name</span>
+              </div>
+              <div className="field-group">
+                <input
+                  required
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  autoComplete="family-name"
+                />
+                <span className="field-notch">Last name</span>
+              </div>
             </div>
-            <div className="field-group">
-              <input
-                value={referredBy}
-                onChange={(e) => setReferredBy(e.target.value)}
-                autoComplete="off"
-              />
-              <span className="field-notch">Referral code (optional)</span>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="field-group">
+                <input
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  autoComplete="tel"
+                  inputMode="tel"
+                />
+                <span className="field-notch">Phone</span>
+              </div>
+              <div className="field-group">
+                <input
+                  value={referredBy}
+                  onChange={(e) => setReferredBy(e.target.value)}
+                  autoComplete="off"
+                />
+                <span className="field-notch">Referral (optional)</span>
+              </div>
             </div>
             <div className="field-group">
               <input
@@ -325,39 +341,40 @@ export function AuthSlider() {
                   setEmailVerified(false);
                 }}
                 autoComplete="email"
-                className={emailVerified ? "border-[var(--ok)]" : ""}
+                className={`pr-24 ${emailVerified ? "border-[var(--ok)]" : ""}`}
               />
               <span className="field-notch">Email</span>
+              {emailVerified ? (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-ok">
+                  Verified
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-semibold text-primary"
+                  onClick={() => void openVerify()}
+                >
+                  Send code
+                </button>
+              )}
             </div>
-            {emailVerified ? (
-              <p className="text-xs font-medium text-ok">Email verified</p>
-            ) : (
-              <ActionButton
-                variant="secondary"
-                size="sm"
-                onClick={async () => {
-                  const msg = await sendCode();
-                  if (msg !== null && upEmail.includes("@")) setOtpOpen(true);
-                }}
-              >
-                Send verification code
-              </ActionButton>
-            )}
-            <PasswordField
-              id="signup-password"
-              label="Password"
-              value={upPassword}
-              onChange={setUpPassword}
-              autoComplete="new-password"
-            />
-            <PasswordField
-              id="confirm-password"
-              label="Confirm password"
-              value={confirm}
-              onChange={setConfirm}
-              autoComplete="new-password"
-              matchClass={confirmClass}
-            />
+            <div className="grid grid-cols-2 gap-2">
+              <PasswordField
+                id="signup-password"
+                label="Password"
+                value={upPassword}
+                onChange={setUpPassword}
+                autoComplete="new-password"
+              />
+              <PasswordField
+                id="confirm-password"
+                label="Confirm"
+                value={confirm}
+                onChange={setConfirm}
+                autoComplete="new-password"
+                matchClass={confirmClass}
+              />
+            </div>
             <label className="flex items-start gap-2 text-xs text-muted">
               <input
                 type="checkbox"
@@ -376,19 +393,31 @@ export function AuthSlider() {
                 onChange={(e) => setTermsOk(e.target.checked)}
                 required
               />
-              I agree to the{" "}
-              <NavLink href="/terms" className="text-primary underline">
-                terms
-              </NavLink>{" "}
-              and{" "}
-              <NavLink href="/privacy" className="text-primary underline">
-                privacy policy
-              </NavLink>
-              .
+              <span>
+                I accept the{" "}
+                <NavLink href="/terms" className="text-primary underline">
+                  Terms
+                </NavLink>{" "}
+                and{" "}
+                <NavLink href="/privacy" className="text-primary underline">
+                  Privacy Policy
+                </NavLink>
+                .
+              </span>
             </label>
             <ActionButton type="submit" variant="primary" size="lg">
               Create account
             </ActionButton>
+            <p className="text-center text-xs text-muted">
+              Already have an account?{" "}
+              <button
+                type="button"
+                className="font-semibold text-primary"
+                onClick={() => setPanel("in")}
+              >
+                Sign in
+              </button>
+            </p>
           </form>
         </section>
 
@@ -398,19 +427,16 @@ export function AuthSlider() {
               className="overlay-box overlay-left-box bg-cover bg-center"
               style={{
                 backgroundImage:
-                  "linear-gradient(180deg, rgba(110,83,48,0.82), rgba(110,83,48,0.88)), url(/medical/lobby.jpg)",
+                  "linear-gradient(180deg, rgba(42,35,24,0.78), rgba(42,35,24,0.86)), url(/medical/lobby.jpg)",
               }}
             >
-              <p className="text-xs tracking-[0.22em] uppercase opacity-80">
-                Returning patient
-              </p>
-              <h2 className="mt-2 text-3xl">Already with us?</h2>
-              <p className="mt-3 max-w-xs text-sm opacity-90">
+              <h2 className="text-2xl md:text-3xl">Already here?</h2>
+              <p className="mt-2 max-w-xs text-sm opacity-90">
                 Sign in to fund Health, book a consult, and pick up from the dispensary.
               </p>
               <ActionButton
                 variant="overlay"
-                className="mt-6"
+                className="mt-5"
                 onClick={() => setPanel("in")}
                 feedback="Opening sign in"
               >
@@ -421,19 +447,16 @@ export function AuthSlider() {
               className="overlay-box overlay-right-box bg-cover bg-center"
               style={{
                 backgroundImage:
-                  "linear-gradient(180deg, rgba(110,83,48,0.82), rgba(110,83,48,0.88)), url(/medical/pharmacy.jpg)",
+                  "linear-gradient(180deg, rgba(42,35,24,0.78), rgba(42,35,24,0.86)), url(/medical/pharmacy.jpg)",
               }}
             >
-              <p className="text-xs tracking-[0.22em] uppercase opacity-80">
-                New patient
-              </p>
-              <h2 className="mt-2 text-3xl">First visit?</h2>
-              <p className="mt-3 max-w-xs text-sm opacity-90">
+              <h2 className="text-2xl md:text-3xl">First visit?</h2>
+              <p className="mt-2 max-w-xs text-sm opacity-90">
                 Open a wallet, pick a Care Quota, and walk into Eastern Ryse already known.
               </p>
               <ActionButton
                 variant="overlay"
-                className="mt-6"
+                className="mt-5"
                 onClick={() => setPanel("up")}
                 feedback="Opening create account"
               >

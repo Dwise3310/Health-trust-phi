@@ -90,9 +90,9 @@ export const PHYSICAL_PRICES = [
 
 export const HEALTH_TO_NAIRA = 100;
 
-// Test-mode faucet. Set NEXT_PUBLIC_TEST_FAUCET=true only on test deployments.
-// Leave it unset at go-live so members cannot credit their own wallet.
-export const TEST_FAUCET = process.env.NEXT_PUBLIC_TEST_FAUCET === "true";
+// Test-mode faucet. On unless NEXT_PUBLIC_TEST_FAUCET=false.
+// Turn it off before go-live so members cannot credit themselves.
+export const TEST_FAUCET = process.env.NEXT_PUBLIC_TEST_FAUCET !== "false";
 
 export const KIND_LABELS: Record<string, string> = {
   membership: "Membership",

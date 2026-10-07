@@ -33,6 +33,7 @@ export default function WithdrawPage() {
   const [amount, setAmount] = useState("50");
   const [step, setStep] = useState<Step>("bank");
   const [loaded, setLoaded] = useState(false);
+  const [hasSavedBank, setHasSavedBank] = useState(false);
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(0);
 
@@ -54,6 +55,9 @@ export default function WithdrawPage() {
         setBankName(wallet.bank_name || "");
         setBankAccount(wallet.bank_account || "");
         setBankAccountName(wallet.bank_account_name || "");
+        setHasSavedBank(
+          Boolean(wallet.bank_name && wallet.bank_account && wallet.bank_account_name),
+        );
       }
     },
     [toast],
@@ -69,11 +73,11 @@ export default function WithdrawPage() {
     });
   }, [load]);
 
-  // Once the saved details are known, start on the amount step.
+  // Skip the bank form only if a complete account was already saved on the server.
+  // Do not watch live typing. One digit must not jump the step.
   useEffect(() => {
-    if (!loaded) return;
-    setStep((s) => (s === "bank" && bankName && bankAccount && bankAccountName ? "amount" : s));
-  }, [loaded, bankName, bankAccount, bankAccountName]);
+    if (loaded && hasSavedBank) setStep("amount");
+  }, [loaded, hasSavedBank]);
 
   const n = Number(amount);
   const amountError =
@@ -87,13 +91,22 @@ export default function WithdrawPage() {
     e.preventDefault();
     const supabase = createClient();
     if (!supabase || !uid) return;
+    const digits = bankAccount.replace(/\D/g, "");
+    if (!bankName.trim() || !bankAccountName.trim()) {
+      toast("Fill bank name and account name first.");
+      return;
+    }
+    if (digits.length !== 10) {
+      toast("Enter the 10-digit NUBAN account number, then tap Save and continue.");
+      return;
+    }
     setBusy(true);
     const { error } = await supabase
       .from("wallets")
       .update({
-        bank_name: bankName,
-        bank_account: bankAccount,
-        bank_account_name: bankAccountName,
+        bank_name: bankName.trim(),
+        bank_account: digits,
+        bank_account_name: bankAccountName.trim(),
       })
       .eq("user_id", uid);
     setBusy(false);
@@ -101,6 +114,8 @@ export default function WithdrawPage() {
       toast(error.message);
       return;
     }
+    setBankAccount(digits);
+    setHasSavedBank(true);
     toast("Bank details saved");
     setStep("amount");
   }
@@ -188,11 +203,17 @@ export default function WithdrawPage() {
             Account number
             <input
               inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={10}
+              minLength={10}
               value={bankAccount}
-              onChange={(e) => setBankAccount(e.target.value)}
+              onChange={(e) => setBankAccount(e.target.value.replace(/\D/g, "").slice(0, 10))}
               className="rounded-xl border border-border bg-bg px-3 py-2.5"
               required
             />
+            <span className="text-xs text-muted">
+              10 digits. You must tap Save and continue. Typing does not move you on.
+            </span>
           </label>
           <ActionButton type="submit" variant="primary" disabled={busy}>
             {busy ? "Saving" : "Save and continue"}
