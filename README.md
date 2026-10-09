@@ -40,6 +40,15 @@ Run these files in the Supabase SQL editor, in order, on a fresh project:
 5. `supabase/05-grants.sql`
 6. `supabase/06-logic.sql`
 7. `supabase/07-codes.sql`
+8. `supabase/08-admin.sql`
+9. `supabase/09-admin-user.sql`
+
+Part 8 opens the staff desk. Part 9 stores the bootstrap super admin
+in the database. The email and password are in that SQL file, not in the app.
+The first sign-in asks you to turn on an authenticator app.
+
+If the member site already works, run **only** parts 8 and 9.
+Do not re-run part 1.
 
 If login already works and features say `permission denied for table`, run
 **only** `supabase/05-grants.sql`. Do not re-run part 1.

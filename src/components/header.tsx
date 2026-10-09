@@ -10,12 +10,20 @@ import { ThemeToggle } from "./theme-toggle";
 export function Header({ signedIn }: { signedIn?: boolean }) {
   const [open, setOpen] = useState(false);
   const [inDesk, setInDesk] = useState(Boolean(signedIn));
+  const [logo, setLogo] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
     if (!supabase) return;
     supabase.auth.getSession().then(({ data }) => {
       setInDesk(Boolean(data.session));
+    });
+    supabase.rpc("sh_public_brand").then(({ data }) => {
+      const url =
+        data && typeof data === "object" && "logo_url" in data
+          ? (data as { logo_url: string | null }).logo_url
+          : null;
+      if (url) setLogo(url);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT") setInDesk(false);
@@ -28,9 +36,14 @@ export function Header({ signedIn }: { signedIn?: boolean }) {
     <header className="sticky top-0 z-40 border-b border-border bg-bg/90 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
         <NavLink href="/" className="flex items-center gap-2">
-          <span className="grid size-9 place-items-center rounded-full bg-primary text-[11px] font-semibold text-primary-fg">
-            SH
-          </span>
+          {logo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logo} alt="" className="size-9 rounded-full object-cover" />
+          ) : (
+            <span className="grid size-9 place-items-center rounded-full bg-primary text-[11px] font-semibold text-primary-fg">
+              SH
+            </span>
+          )}
           <span className="leading-tight">
             <span className="block text-sm font-semibold">{HOSPITAL.program}</span>
             <span className="block text-[11px] text-muted">

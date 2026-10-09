@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Fraunces, Outfit } from "next/font/google";
 import { CookieBanner } from "@/components/cookie-banner";
+import { SiteBeacon } from "@/components/site-beacon";
 import { LoadingProvider } from "@/components/loading-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ToastProvider } from "@/components/toast";
@@ -47,6 +48,7 @@ export default function RootLayout({
           <ToastProvider>
             <LoadingProvider>
               {children}
+              <SiteBeacon />
               <CookieBanner />
             </LoadingProvider>
           </ToastProvider>
