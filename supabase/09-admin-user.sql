@@ -1,15 +1,17 @@
 -- Sure Health · part 9
--- Run AFTER 08-admin.sql.
--- Creates the super admin in the database. The password is not in the app.
+-- Run AFTER 08h-grants.sql.
+-- Stores the super admin in the database. The password is not in the app.
 --   email    divineemmanuel461@gmail.com
 --   password 01862250
 -- Change the password from the staff desk after the first sign-in.
 -- If this email already has a member account, this resets that password
--- and puts the account on the staff allow list.
+-- and puts the account on the staff list.
+
+create extension if not exists pgcrypto;
 
 set search_path = public, extensions;
 
-do $$
+do $admin$
 declare
   em text := 'divineemmanuel461@gmail.com';
   uid uuid;
@@ -76,12 +78,12 @@ begin
   else
     update auth.users
       set encrypted_password = crypt('01862250', gen_salt('bf')),
-          email_confirmed_at = coalesce(email_confirmed_at, now()),
-          raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb) || '{"provider":"email","providers":["email"]}'::jsonb
+          email_confirmed_at = coalesce(email_confirmed_at, now())
       where id = uid;
 
     if not exists (
-      select 1 from auth.identities where user_id = uid and provider = 'email'
+      select 1 from auth.identities
+      where user_id = uid and provider = 'email'
     ) then
       insert into auth.identities (
         id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at
@@ -96,13 +98,33 @@ begin
     end if;
   end if;
 
+  if not exists (select 1 from public.profiles where id = uid) then
+    insert into public.profiles (id, full_name, phone, referral_code, role)
+    values (
+      uid,
+      'Sure Health Super Admin',
+      '',
+      public.sh_referral_code(),
+      'super_admin'
+    );
+  else
+    update public.profiles
+      set role = 'super_admin',
+          full_name = coalesce(nullif(full_name, ''), 'Sure Health Super Admin')
+      where id = uid;
+  end if;
+
+  if not exists (select 1 from public.wallets where user_id = uid) then
+    insert into public.wallets (user_id, account_number)
+    values (uid, public.sh_account_number());
+  end if;
+
   insert into public.admin_allowlist (email, is_super, active, note)
   values (lower(em), true, true, 'Bootstrap super admin')
   on conflict (email) do update
     set is_super = true, active = true;
-
-  update public.profiles
-    set role = 'super_admin',
-        full_name = coalesce(nullif(full_name, ''), 'Sure Health Super Admin')
-    where id = uid;
-end $$;
+exception
+  when others then
+    raise exception 'Part 9 stopped: %', sqlerrm;
+end
+$admin$;

@@ -40,14 +40,22 @@ Run these files in the Supabase SQL editor, in order, on a fresh project:
 5. `supabase/05-grants.sql`
 6. `supabase/06-logic.sql`
 7. `supabase/07-codes.sql`
-8. `supabase/08-admin.sql`
+8. Do not paste `08-admin.sql` as one blob. The editor cuts it off. Run these one at a time:
+   - `supabase/08a-tables.sql`
+   - `supabase/08b-totp.sql`
+   - `supabase/08c-access.sql`
+   - `supabase/08d-analytics.sql`
+   - `supabase/08e-queues.sql`
+   - `supabase/08f-roles.sql`
+   - `supabase/08g-hooks.sql`
+   - `supabase/08h-grants.sql`
 9. `supabase/09-admin-user.sql`
 
-Part 8 opens the staff desk. Part 9 stores the bootstrap super admin
-in the database. The email and password are in that SQL file, not in the app.
+Part 9 stores the bootstrap super admin in the database.
+The email and password are in that SQL file, not in the app.
 The first sign-in asks you to turn on an authenticator app.
 
-If the member site already works, run **only** parts 8 and 9.
+If the member site already works, run only the 08a to 08h files, then part 9.
 Do not re-run part 1.
 
 If login already works and features say `permission denied for table`, run
