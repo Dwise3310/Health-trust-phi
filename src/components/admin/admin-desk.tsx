@@ -598,7 +598,7 @@ function ReceptionPane() {
     }
   }
 
-  function builduseTable() {
+  function buildusageTable() {
     return {
       head: ["When", "Used", "Covered", "Staff"],
       body: uses.map((row) => [
@@ -667,10 +667,10 @@ function ReceptionPane() {
             <button type="button" className="text-sm font-semibold text-primary" onClick={() => void downloadSlip(`care-quota-${hit.code}.pdf`, "Care Quota information", infoRows(hit))}>
               Download information
             </button>
-            <button type="button" className="text-sm font-semibold text-primary" onClick={() => printSlip("Care Quota usage history", infoRows(hit).slice(0, 6), uses.length ? builduseTable() : undefined)}>
+            <button type="button" className="text-sm font-semibold text-primary" onClick={() => printSlip("Care Quota usage history", infoRows(hit).slice(0, 6), uses.length ? buildusageTable() : undefined)}>
               Print usage history
             </button>
-            <button type="button" className="text-sm font-semibold text-primary" onClick={() => void downloadSlip(`care-usage-${hit.code}.pdf`, "Care Quota usage history", infoRows(hit).slice(0, 6), uses.length ? builduseTable() : undefined)}>
+            <button type="button" className="text-sm font-semibold text-primary" onClick={() => void downloadSlip(`care-usage-${hit.code}.pdf`, "Care Quota usage history", infoRows(hit).slice(0, 6), uses.length ? buildusageTable() : undefined)}>
               Download usage history
             </button>
           </div>
