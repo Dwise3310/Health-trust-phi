@@ -11,6 +11,27 @@ import { formatNaira, nairaFromHealth, formatHealth } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 
 type BagLine = { key: number; item: CatalogItem };
+type Order = {
+  id: number;
+  title: string;
+  amount: number;
+  fulfill: string | null;
+  status: string;
+  carrier: string | null;
+  tracking: string | null;
+  address: string | null;
+  at: string;
+};
+
+const STEP: Record<string, string> = {
+  paid: "Paid, waiting on the pharmacy",
+  open: "Paid, waiting on the pharmacy",
+  preparing: "Pharmacy is preparing it",
+  ready: "Ready for pickup at the dispensary",
+  dispatched: "On the way",
+  delivered: "Delivered",
+  done: "Delivered",
+};
 
 let nextKey = 1;
 
@@ -21,6 +42,12 @@ export default function PharmacyPage() {
   const [bag, setBag] = useState<BagLine[]>([]);
   const [uid, setUid] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [method, setMethod] = useState<"pickup" | "delivery">("pickup");
+  const [phone, setPhone] = useState("");
+  const [stateName, setStateName] = useState("");
+  const [address, setAddress] = useState("");
+  const [landmark, setLandmark] = useState("");
+  const [orders, setOrders] = useState<Order[]>([]);
 
   const current = useMemo(() => CATALOG.find((g) => g.id === group) || CATALOG[0], [group]);
   const total = bag.reduce((n, line) => n + line.item.health, 0);
@@ -28,8 +55,14 @@ export default function PharmacyPage() {
   useEffect(() => {
     const supabase = createClient();
     if (!supabase) return;
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) setUid(data.user.id);
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) return;
+      setUid(data.user.id);
+      const { data: board } = await supabase.rpc("sh_my_board");
+      const list = board && typeof board === "object" && "orders" in board
+        ? (board as { orders: Order[] }).orders
+        : [];
+      setOrders(Array.isArray(list) ? list : []);
     });
   }, []);
 
@@ -49,22 +82,30 @@ export default function PharmacyPage() {
       return;
     }
     if (bag.length === 0) return;
+    if (method === "delivery" && address.trim().length < 5) {
+      toast("Delivery needs a street address.");
+      return;
+    }
     setBusy(true);
     start("Paying the bag");
     let remaining = [...bag];
     for (const line of bag) {
-      const { error } = await supabase.rpc("sh_buy_product", {
+      const { error } = await supabase.rpc("sh_place_order", {
         p_name: line.item.name,
         p_sku: line.item.sku,
         p_amount: line.item.health,
+        p_method: method,
+        p_phone: phone,
+        p_state: stateName,
+        p_address: address,
+        p_landmark: landmark,
+        p_note: "",
       });
       if (error) {
         stop();
         setBusy(false);
         setBag(remaining);
-        toast(
-          `${line.item.name} was not paid: ${error.message}. Items already paid were removed from your bag.`,
-        );
+        toast(`${line.item.name} was not paid: ${error.message}`);
         return;
       }
       remaining = remaining.filter((l) => l.key !== line.key);
@@ -72,7 +113,12 @@ export default function PharmacyPage() {
     stop();
     setBusy(false);
     setBag([]);
-    toast("Pharmacy paid from your wallet");
+    toast(method === "delivery" ? "Paid. The pharmacy will dispatch it." : "Paid. We will tell you when pickup is ready.");
+    const { data: board } = await supabase.rpc("sh_my_board");
+    const list = board && typeof board === "object" && "orders" in board
+      ? (board as { orders: Order[] }).orders
+      : [];
+    setOrders(Array.isArray(list) ? list : []);
   }
 
   return (
@@ -164,6 +210,30 @@ export default function PharmacyPage() {
           )}
 
           <div className="border-t border-border pt-4">
+            <p className="text-sm font-semibold">How you want it</p>
+            <div className="mt-2 flex flex-wrap gap-4 text-sm">
+              <label className="flex items-center gap-2">
+                <input type="radio" name="method" checked={method === "pickup"} onChange={() => setMethod("pickup")} />
+                Pickup at the hospital
+              </label>
+              <label className="flex items-center gap-2">
+                <input type="radio" name="method" checked={method === "delivery"} onChange={() => setMethod("delivery")} />
+                Delivery
+              </label>
+            </div>
+            {method === "delivery" ? (
+              <div className="mt-3 grid gap-2">
+                <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone for the courier" className="rounded-xl border border-border bg-bg px-3 py-2 text-sm" />
+                <input value={stateName} onChange={(e) => setStateName(e.target.value)} placeholder="State" className="rounded-xl border border-border bg-bg px-3 py-2 text-sm" />
+                <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Street address" className="rounded-xl border border-border bg-bg px-3 py-2 text-sm" />
+                <input value={landmark} onChange={(e) => setLandmark(e.target.value)} placeholder="Landmark" className="rounded-xl border border-border bg-bg px-3 py-2 text-sm" />
+              </div>
+            ) : (
+              <p className="mt-2 text-xs text-muted">You will see a notice here when the dispensary says it is ready.</p>
+            )}
+          </div>
+
+          <div className="border-t border-border pt-4">
             <div className="flex items-baseline justify-between">
               <span className="text-sm text-muted">Total</span>
               <span className="font-semibold tabular-nums">{formatHealth(total)}</span>
@@ -176,6 +246,30 @@ export default function PharmacyPage() {
           </ActionButton>
         </aside>
       </div>
+
+      <section className="grid gap-2">
+        <h2 className="text-lg">Your orders</h2>
+        {orders.length === 0 ? (
+          <p className="text-sm text-muted">Nothing on the way yet. Paid orders show their step here.</p>
+        ) : (
+          <ul>
+            {orders.map((order) => (
+              <li key={order.id} className="border-b border-border py-3 text-sm">
+                <p className="font-semibold">{order.title}</p>
+                <p className="mt-1 text-muted">
+                  {order.status === "delivered" && order.fulfill !== "delivery"
+                    ? "Collected at the dispensary"
+                    : STEP[order.status] || order.status}
+                  {order.fulfill === "delivery" ? " · delivery" : " · pickup"}
+                  {order.carrier ? ` · ${order.carrier}` : ""}
+                  {order.tracking ? ` · waybill ${order.tracking}` : ""}
+                </p>
+                {order.address ? <p className="text-muted">{order.address}</p> : null}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </main>
   );
 }

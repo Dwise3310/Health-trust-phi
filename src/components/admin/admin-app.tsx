@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { HeartbeatLoader } from "@/components/heartbeat-loader";
@@ -141,10 +142,10 @@ export function AdminApp() {
   return (
     <div className="min-h-screen bg-bg text-fg">
       <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-        <div>
+        <Link href="/" className="block">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Staff desk</p>
           <p className="text-sm font-semibold">{HOSPITAL.program}</p>
-        </div>
+        </Link>
         <ThemeToggle />
       </header>
 

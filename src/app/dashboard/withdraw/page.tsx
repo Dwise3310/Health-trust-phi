@@ -23,6 +23,14 @@ function mask(account: string) {
   return digits.length > 4 ? `•••• ${digits.slice(-4)}` : digits;
 }
 
+type Withdrawal = { id: number; amount: number; status: string; detail: string | null; at: string };
+
+const WITHDRAW_LABEL: Record<string, string> = {
+  open: "Processing",
+  done: "Paid",
+  rejected: "Returned to wallet",
+};
+
 export default function WithdrawPage() {
   const { toast } = useToast();
   const [uid, setUid] = useState<string | null>(null);
@@ -36,6 +44,7 @@ export default function WithdrawPage() {
   const [hasSavedBank, setHasSavedBank] = useState(false);
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(0);
+  const [history, setHistory] = useState<Withdrawal[]>([]);
 
   const load = useCallback(
     async (userId: string) => {
@@ -59,6 +68,11 @@ export default function WithdrawPage() {
           Boolean(wallet.bank_name && wallet.bank_account && wallet.bank_account_name),
         );
       }
+      const { data: board } = await supabase.rpc("sh_my_board");
+      const list = board && typeof board === "object" && "withdrawals" in board
+        ? (board as { withdrawals: Withdrawal[] }).withdrawals
+        : [];
+      setHistory(Array.isArray(list) ? list : []);
     },
     [toast],
   );
@@ -350,6 +364,25 @@ export default function WithdrawPage() {
           </div>
         </section>
       ) : null}
+
+      <section className="grid gap-2">
+        <h2 className="text-lg">Withdrawal history</h2>
+        {history.length === 0 ? (
+          <p className="text-sm text-muted">No withdrawals yet. A request stays on Processing until the desk pays it.</p>
+        ) : (
+          <ul>
+            {history.map((item) => (
+              <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-border py-3 text-sm">
+                <div>
+                  <p className="font-semibold tabular-nums">{formatHealth(Number(item.amount))}</p>
+                  <p className="text-muted">{new Date(item.at).toLocaleString("en-NG")}</p>
+                </div>
+                <StatusChip label={WITHDRAW_LABEL[item.status] || item.status} tone={item.status === "done" ? "ok" : item.status === "rejected" ? "danger" : "warn"} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </main>
   );
 }

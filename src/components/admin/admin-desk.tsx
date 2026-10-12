@@ -8,6 +8,7 @@ import { ADMIN_NAV, ADMIN_PERMISSIONS, canSee, type AdminSection, type AdminStat
 import { HEALTH_TO_NAIRA } from "@/lib/constants";
 import { formatHealth, formatNaira } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { downloadSlip, printSlip, type SlipRow } from "@/lib/slips";
 
 type QueueRow = {
   id: number;
@@ -23,6 +24,14 @@ type QueueRow = {
   status: string;
   reply: string | null;
   created_at: string;
+  fulfill?: string | null;
+  member_status?: string | null;
+  carrier?: string | null;
+  tracking_ref?: string | null;
+  ship_phone?: string | null;
+  ship_state?: string | null;
+  ship_address?: string | null;
+  ship_landmark?: string | null;
 };
 
 type Analytics = {
@@ -105,6 +114,20 @@ type RoleRow = { id: number; name: string; permissions: string[] };
 type StaffRow = { user_id: string; email: string; name: string; role_id: number; role_name: string; active: boolean };
 type InviteRow = { id: number; email: string; role_name: string; accepted: boolean; created_at: string };
 type RolesPayload = { roles: RoleRow[]; staff: StaffRow[]; invites: InviteRow[] };
+type CodeUse = { percent: number; note: string | null; staff: string | null; at: string };
+type CardHit = {
+  code: string;
+  type: string;
+  cost: number;
+  status: string;
+  issued_at: string;
+  member: string;
+  email: string;
+  phone: string;
+  tier: string;
+};
+type ChartNote = { id: number; kind: string; body: string; author: string | null; at: string };
+type StaffAction = { action: string; details: string; at: string };
 type AuditRow = { actor_username: string; action: string; details: string; created_at: string };
 
 const QUEUE_COPY: Record<string, { title: string; lead: string; done: string; extra?: string }> = {
@@ -121,12 +144,12 @@ const QUEUE_COPY: Record<string, { title: string; lead: string; done: string; ex
   },
   pharmacy: {
     title: "Pharmacy",
-    lead: "Paid orders waiting for the dispensary. Mark dispensed when the medicine has left the shelf.",
-    done: "Mark dispensed",
+    lead: "Paid orders. Pickup is collected at the dispensary. Delivery needs a courier and a waybill before you mark it on the way. The member sees each step on their pharmacy page.",
+    done: "Mark delivered",
   },
   card: {
     title: "Appointment cards",
-    lead: "Digital cards bought on the phone. Mark collected when reception has honoured the card.",
+    lead: "Each card has a code the member brings to the desk. Check it under Reception, then print the slip. Mark collected when the visit has been honoured.",
     done: "Mark collected",
   },
   enquiry: {
@@ -166,24 +189,10 @@ export function AdminDesk({ status, onSignOut }: { status: AdminStatus; onSignOu
     [status],
   );
   const [section, setSection] = useState<AdminSection>(nav[0]?.id || "analytics");
-  const [nextPassword, setNextPassword] = useState("");
-  const { toast } = useToast();
 
   useEffect(() => {
     if (!nav.some((item) => item.id === section) && nav[0]) setSection(nav[0].id);
   }, [nav, section]);
-
-  async function changePassword(e: FormEvent) {
-    e.preventDefault();
-    const supabase = createClient();
-    if (!supabase) return;
-    const { error } = await supabase.auth.updateUser({ password: nextPassword });
-    if (error) toast(error.message);
-    else {
-      setNextPassword("");
-      toast("Password updated");
-    }
-  }
 
   return (
     <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 lg:grid-cols-[200px_minmax(0,1fr)]">
@@ -229,23 +238,6 @@ export function AdminDesk({ status, onSignOut }: { status: AdminStatus; onSignOu
           {section === "logo" ? <LogoPane /> : null}
           {section === "audit" ? <AuditPane /> : null}
         </div>
-
-        <form onSubmit={changePassword} className="mt-10 grid max-w-sm gap-2 border-t border-border pt-6">
-          <p className="text-sm font-semibold">Change your password</p>
-          <input
-            type="password"
-            minLength={8}
-            required
-            value={nextPassword}
-            onChange={(e) => setNextPassword(e.target.value)}
-            autoComplete="new-password"
-            className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm"
-            placeholder="New password"
-          />
-          <button type="submit" className="btn-press w-fit text-sm font-semibold text-primary">
-            Save password
-          </button>
-        </form>
       </div>
     </div>
   );
@@ -267,13 +259,18 @@ function AnalyticsPane() {
   const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
   const [data, setData] = useState<Analytics | null>(null);
   const [busy, setBusy] = useState(true);
+  const [failed, setFailed] = useState<string | null>(null);
 
   async function load(start = from, end = to) {
     setBusy(true);
+    setFailed(null);
     try {
       setData(await rpc<Analytics>("sh_admin_analytics", { p_from: start, p_to: end }));
     } catch (err) {
-      toast(err instanceof Error ? err.message : "Analytics failed");
+      const message = err instanceof Error ? err.message : "Analytics failed";
+      setData(null);
+      setFailed(message);
+      toast(message);
     } finally {
       setBusy(false);
     }
@@ -314,9 +311,13 @@ function AnalyticsPane() {
           Apply range
         </button>
       </form>
-      {busy || !data ? (
+      {busy ? (
         <HeartbeatLoader label="Reading the books" />
-      ) : (
+      ) : failed ? (
+        <p className="max-w-xl text-sm text-muted">
+          The books did not open. {failed}. Run `supabase/10a-analytics.sql` in the Supabase SQL editor, then apply the range again.
+        </p>
+      ) : data ? (
         <>
           <div className="grid grid-cols-2 gap-x-6 gap-y-6 md:grid-cols-4">
             <Stat label="People" value={String(data.total_users)} hint={`${data.new_users} new in range`} />
@@ -356,7 +357,7 @@ function AnalyticsPane() {
             ))}
           </div>
         </>
-      )}
+      ) : null}
     </section>
   );
 }
@@ -368,6 +369,8 @@ function QueuePane({ kind }: { kind: string }) {
   const [filter, setFilter] = useState("open");
   const [busy, setBusy] = useState(true);
   const [reply, setReply] = useState<Record<number, string>>({});
+  const [carrier, setCarrier] = useState<Record<number, string>>({});
+  const [tracking, setTracking] = useState<Record<number, string>>({});
 
   async function load(status = filter) {
     setBusy(true);
@@ -394,6 +397,21 @@ function QueuePane({ kind }: { kind: string }) {
       await load();
     } catch (err) {
       toast(err instanceof Error ? err.message : "Could not update");
+    }
+  }
+
+  async function fulfill(id: number, status: string) {
+    try {
+      await rpc("sh_admin_fulfill", {
+        p_id: id,
+        p_status: status,
+        p_carrier: carrier[id] || "",
+        p_tracking: tracking[id] || "",
+      });
+      toast("The member can see this step");
+      await load();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Could not update the order");
     }
   }
 
@@ -431,6 +449,18 @@ function QueuePane({ kind }: { kind: string }) {
             </div>
             <p className="text-sm">{row.title}</p>
             {row.detail ? <p className="whitespace-pre-wrap text-sm text-muted">{row.detail}</p> : null}
+            {kind === "pharmacy" ? (
+              <p className="text-sm text-muted">
+                {row.fulfill === "delivery" ? "Delivery" : "Pickup"}
+                {row.ship_phone ? ` · ${row.ship_phone}` : ""}
+                {row.ship_state ? ` · ${row.ship_state}` : ""}
+                {row.ship_address ? ` · ${row.ship_address}` : ""}
+                {row.ship_landmark ? ` · ${row.ship_landmark}` : ""}
+                {row.member_status ? ` · step ${row.member_status}` : ""}
+                {row.carrier ? ` · ${row.carrier}` : ""}
+                {row.tracking_ref ? ` · ${row.tracking_ref}` : ""}
+              </p>
+            ) : null}
             <p className="text-xs text-muted">
               {row.email} {row.phone ? `· ${row.phone}` : ""} {row.amount != null ? `· ${money(row.amount)}` : ""}
             </p>
@@ -450,9 +480,45 @@ function QueuePane({ kind }: { kind: string }) {
                     Confirm
                   </button>
                 ) : null}
-                <button type="button" className="text-sm font-semibold text-primary" onClick={() => void act(row.id, kind === "enquiry" ? "replied" : "done")}>
-                  {copy.done}
-                </button>
+                {kind === "pharmacy" ? (
+                  <>
+                    {row.fulfill === "delivery" ? (
+                      <>
+                        <input
+                          value={carrier[row.id] || row.carrier || ""}
+                          onChange={(e) => setCarrier((m) => ({ ...m, [row.id]: e.target.value }))}
+                          placeholder="Courier"
+                          className="w-32 rounded-lg border border-border bg-bg px-3 py-2 text-sm"
+                        />
+                        <input
+                          value={tracking[row.id] || row.tracking_ref || ""}
+                          onChange={(e) => setTracking((m) => ({ ...m, [row.id]: e.target.value }))}
+                          placeholder="Waybill"
+                          className="w-40 rounded-lg border border-border bg-bg px-3 py-2 text-sm"
+                        />
+                      </>
+                    ) : null}
+                    <button type="button" className="text-sm font-semibold text-primary" onClick={() => void fulfill(row.id, "preparing")}>
+                      Preparing
+                    </button>
+                    {row.fulfill === "delivery" ? (
+                      <button type="button" className="text-sm font-semibold text-primary" onClick={() => void fulfill(row.id, "dispatched")}>
+                        On the way
+                      </button>
+                    ) : (
+                      <button type="button" className="text-sm font-semibold text-primary" onClick={() => void fulfill(row.id, "ready")}>
+                        Ready for pickup
+                      </button>
+                    )}
+                    <button type="button" className="text-sm font-semibold text-primary" onClick={() => void fulfill(row.id, "delivered")}>
+                      {row.fulfill === "delivery" ? "Delivered" : "Collected"}
+                    </button>
+                  </>
+                ) : (
+                  <button type="button" className="text-sm font-semibold text-primary" onClick={() => void act(row.id, kind === "enquiry" ? "replied" : "done")}>
+                    {copy.done}
+                  </button>
+                )}
                 {kind === "withdraw" ? (
                   <button type="button" className="text-sm font-semibold text-danger" onClick={() => void act(row.id, "rejected")}>
                     Reject and refund
@@ -467,19 +533,50 @@ function QueuePane({ kind }: { kind: string }) {
   );
 }
 
+function infoRows(hit: CodeHit): SlipRow[] {
+  return [
+    { label: "Member", value: hit.member },
+    { label: "Email", value: hit.email || "-" },
+    { label: "Phone", value: hit.phone || "-" },
+    { label: "Plan", value: hit.tier },
+    { label: "Plan quota left", value: hit.plan_quota == null ? "None" : `${hit.plan_quota}%` },
+    { label: "Care Quota code", value: hit.code },
+    { label: "Allocated", value: `${hit.allocated}%` },
+    { label: "Remaining", value: `${hit.remaining}%` },
+    { label: "Code status", value: hit.status },
+    { label: "Issued", value: when(hit.issued_at) },
+    { label: "Funding account", value: hit.account_number || "None" },
+  ];
+}
+
 function ReceptionPane() {
   const { toast } = useToast();
   const [code, setCode] = useState("");
   const [hit, setHit] = useState<CodeHit | null>(null);
+  const [uses, setUses] = useState<CodeUse[]>([]);
   const [used, setUsed] = useState("5");
   const [note, setNote] = useState("");
+  const [cardCode, setCardCode] = useState("");
+  const [card, setCard] = useState<CardHit | null>(null);
+
+  async function loadUses(value: string) {
+    try {
+      const data = await rpc<CodeUse[]>("sh_admin_code_uses", { p_code: value });
+      setUses(Array.isArray(data) ? data : []);
+    } catch {
+      setUses([]);
+    }
+  }
 
   async function lookup(e?: FormEvent) {
     e?.preventDefault();
     try {
-      setHit(await rpc<CodeHit>("sh_admin_lookup_code", { p_code: code }));
+      const next = await rpc<CodeHit>("sh_admin_lookup_code", { p_code: code });
+      setHit(next);
+      await loadUses(next.code || code);
     } catch (err) {
       setHit(null);
+      setUses([]);
       toast(err instanceof Error ? err.message : "No code");
     }
   }
@@ -494,18 +591,55 @@ function ReceptionPane() {
       });
       setHit(next);
       setNote("");
+      await loadUses(next.code || code);
       toast("Code updated");
     } catch (err) {
       toast(err instanceof Error ? err.message : "Could not update the code");
     }
   }
 
+  function useTable() {
+    return {
+      head: ["When", "Used", "Covered", "Staff"],
+      body: uses.map((row) => [
+        when(row.at),
+        `${row.percent}%`,
+        row.note || "-",
+        row.staff || "-",
+      ]),
+    };
+  }
+
+  async function lookupCard(e: FormEvent) {
+    e.preventDefault();
+    try {
+      setCard(await rpc<CardHit>("sh_admin_lookup_card", { p_code: cardCode }));
+    } catch (err) {
+      setCard(null);
+      toast(err instanceof Error ? err.message : "No card");
+    }
+  }
+
+  function cardRows(hitCard: CardHit): SlipRow[] {
+    return [
+      { label: "Card code", value: hitCard.code },
+      { label: "Card type", value: hitCard.type },
+      { label: "Paid", value: money(hitCard.cost) },
+      { label: "Status", value: hitCard.status },
+      { label: "Issued", value: when(hitCard.issued_at) },
+      { label: "Member", value: hitCard.member },
+      { label: "Email", value: hitCard.email || "-" },
+      { label: "Phone", value: hitCard.phone || "-" },
+      { label: "Plan", value: hitCard.tier },
+    ];
+  }
+
   return (
-    <section className="grid max-w-xl gap-4">
+    <section className="grid max-w-xl gap-8">
       <div>
         <h1 className="text-3xl">Reception</h1>
         <p className="mt-2 text-sm text-muted">
-          When a member walks in, check the Care Quota code they were given. Prime, Plus, and Base show here so the waiting room can seat them in the right place. Recording a use takes that percent off the code.
+          Check the Care Quota code, then print two papers: one for the balance, one for the usage of that code. Appointment cards use a separate code and a separate slip.
         </p>
       </div>
       <form className="flex gap-2" onSubmit={lookup}>
@@ -526,6 +660,27 @@ function ReceptionPane() {
           <p>Plan {hit.tier} · plan quota left {hit.plan_quota ?? "none"}%</p>
           <p>Code {hit.code} · {hit.remaining}% left of {hit.allocated}% · {hit.status}</p>
           <p className="text-muted">Funding account {hit.account_number || "none"} · issued {when(hit.issued_at)}</p>
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+            <button type="button" className="text-sm font-semibold text-primary" onClick={() => printSlip("Care Quota information", infoRows(hit))}>
+              Print information
+            </button>
+            <button type="button" className="text-sm font-semibold text-primary" onClick={() => void downloadSlip(`care-quota-${hit.code}.pdf`, "Care Quota information", infoRows(hit))}>
+              Download information
+            </button>
+            <button type="button" className="text-sm font-semibold text-primary" onClick={() => printSlip("Care Quota usage history", infoRows(hit).slice(0, 6), uses.length ? useTable() : undefined)}>
+              Print usage history
+            </button>
+            <button type="button" className="text-sm font-semibold text-primary" onClick={() => void downloadSlip(`care-usage-${hit.code}.pdf`, "Care Quota usage history", infoRows(hit).slice(0, 6), uses.length ? useTable() : undefined)}>
+              Download usage history
+            </button>
+          </div>
+          <h2 className="pt-3 text-sm font-semibold">Uses of this code</h2>
+          {uses.length === 0 ? <p className="text-muted">No desk use recorded yet.</p> : null}
+          {uses.map((row, i) => (
+            <p key={`${row.at}-${i}`} className="text-muted">
+              {when(row.at)} · {row.percent}% · {row.note || "No note"} · {row.staff || "Desk"}
+            </p>
+          ))}
           <form className="mt-2 grid gap-2" onSubmit={redeem}>
             <label className="grid gap-1 text-xs text-muted">
               Percent used at the desk
@@ -541,15 +696,59 @@ function ReceptionPane() {
           </form>
         </div>
       ) : null}
+
+      <div className="grid gap-3">
+        <h2 className="text-xl">Appointment card</h2>
+        <p className="text-sm text-muted">The member shows an SC- code. Confirm the card type, then print or download the slip.</p>
+        <form className="flex gap-2" onSubmit={lookupCard}>
+          <input
+            value={cardCode}
+            onChange={(e) => setCardCode(e.target.value.toUpperCase())}
+            placeholder="SC- code"
+            className="flex-1 rounded-xl border border-border bg-bg px-3 py-2.5 font-mono"
+          />
+          <button type="submit" className="btn-press rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-fg">
+            Check card
+          </button>
+        </form>
+        {card ? (
+          <div className="grid gap-2 text-sm">
+            <p className="font-semibold">{card.member} · {card.type} card</p>
+            <p>Code {card.code} · {card.status} · {money(card.cost)}</p>
+            <p className="text-muted">{card.email} {card.phone ? `· ${card.phone}` : ""} · plan {card.tier}</p>
+            <div className="flex flex-wrap gap-x-4 gap-y-2">
+              <button type="button" className="text-sm font-semibold text-primary" onClick={() => printSlip("Appointment card", cardRows(card))}>
+                Print card slip
+              </button>
+              <button type="button" className="text-sm font-semibold text-primary" onClick={() => void downloadSlip(`appointment-${card.code}.pdf`, "Appointment card", cardRows(card))}>
+                Download card slip
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </div>
     </section>
   );
 }
+
+const CHART_KINDS = [
+  { id: "complaint", label: "Complaint" },
+  { id: "diagnosis", label: "Diagnosis" },
+  { id: "medication", label: "Medication" },
+  { id: "progress", label: "Progress" },
+  { id: "plan", label: "Plan" },
+  { id: "next_visit", label: "Next visit" },
+];
 
 function PatientsPane() {
   const { toast } = useToast();
   const [q, setQ] = useState("");
   const [list, setList] = useState<PatientSum[]>([]);
   const [folder, setFolder] = useState<PatientFolder | null>(null);
+  const [notes, setNotes] = useState<ChartNote[]>([]);
+  const [tab, setTab] = useState<"info" | "chart" | "codes" | "visits" | "wallet">("info");
+  const [kind, setKind] = useState("complaint");
+  const [body, setBody] = useState("");
   const [busy, setBusy] = useState(true);
 
   async function search(query = q) {
@@ -572,17 +771,46 @@ function PatientsPane() {
   async function open(id: string) {
     try {
       setFolder(await rpc<PatientFolder>("sh_admin_patient", { p_id: id }));
+      setTab("info");
+      try {
+        const rows = await rpc<ChartNote[]>("sh_admin_records", { p_user: id });
+        setNotes(Array.isArray(rows) ? rows : []);
+      } catch {
+        setNotes([]);
+      }
     } catch (err) {
       toast(err instanceof Error ? err.message : "Could not open the folder");
     }
   }
+
+  async function saveNote(e: FormEvent) {
+    e.preventDefault();
+    if (!folder) return;
+    try {
+      await rpc("sh_admin_add_record", { p_user: folder.id, p_kind: kind, p_body: body });
+      setBody("");
+      const rows = await rpc<ChartNote[]>("sh_admin_records", { p_user: folder.id });
+      setNotes(Array.isArray(rows) ? rows : []);
+      toast("Saved on the chart");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Could not save the note");
+    }
+  }
+
+  const tabs = [
+    { id: "info" as const, label: "Information" },
+    { id: "chart" as const, label: "Medical history" },
+    { id: "codes" as const, label: "Codes" },
+    { id: "visits" as const, label: "Visits" },
+    { id: "wallet" as const, label: "Wallet" },
+  ];
 
   return (
     <section className="grid gap-4">
       <div>
         <h1 className="text-3xl">Patients</h1>
         <p className="mt-2 text-sm text-muted">
-          Search by name, email, phone, funding account, or Care Quota code. The folder is the chart the desk works from.
+          Search by name, email, phone, funding account, or Care Quota code. Open a folder, then use the tabs for the file, the chart, and the codes.
         </p>
       </div>
       <form
@@ -610,29 +838,89 @@ function PatientsPane() {
         ))}
       </ul>
       {folder ? (
-        <div className="grid gap-3 border-t border-border pt-4 text-sm">
+        <div className="grid gap-4 border-t border-border pt-4 text-sm">
           <h2 className="text-2xl">{folder.member}</h2>
-          <p className="text-muted">{folder.email} · {folder.phone || "no phone"} · {folder.tier || "no plan"}</p>
-          <p>Quota left {folder.quota ?? "none"}% {folder.expires ? `· plan ends ${when(folder.expires)}` : ""}</p>
-          <p>Wallet {money(folder.balance)} · account {folder.account_number}</p>
-          <p>Bank {folder.bank_name || "not set"} · {folder.bank_account_name || ""} · {folder.bank_account || ""}</p>
-          <p>{[folder.gender, folder.dob, folder.nationality, folder.state, folder.address].filter(Boolean).join(" · ") || "Profile still thin"}</p>
-          <p>Blood {folder.blood_group || "unknown"} · genotype {folder.genotype || "unknown"}</p>
-          <p>Next of kin {folder.kin || "not set"} {folder.kin_phone || ""}</p>
-          <h3 className="pt-2 font-semibold">Codes</h3>
-          {(folder.codes || []).length === 0 ? <p className="text-muted">No codes.</p> : null}
-          {(folder.codes || []).map((c) => (
-            <p key={c.code}>{c.code} · {c.remaining}/{c.allocated}% · {c.status}</p>
-          ))}
-          <h3 className="pt-2 font-semibold">Visits</h3>
-          {(folder.visits || []).length === 0 ? <p className="text-muted">No visits.</p> : null}
-          {(folder.visits || []).map((v, i) => (
-            <p key={`${v.when}-${i}`}>{v.kind} · {when(v.when)} · {v.minutes} min · {v.status} · {v.notes || ""}</p>
-          ))}
-          <h3 className="pt-2 font-semibold">Recent wallet</h3>
-          {(folder.tx || []).map((t, i) => (
-            <p key={`${t.at}-${i}`} className="text-muted">{when(t.at)} · {t.kind} · {t.amount} · {t.note}</p>
-          ))}
+          <div role="tablist" aria-label="Patient folder" className="flex gap-1 overflow-x-auto border-b border-border">
+            {tabs.map((item) => {
+              const on = tab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={on}
+                  onClick={() => setTab(item.id)}
+                  className={`relative min-h-10 shrink-0 px-3 text-sm font-semibold ${on ? "text-primary" : "text-muted"}`}
+                >
+                  {item.label}
+                  {on ? <span className="tab-mark" /> : null}
+                </button>
+              );
+            })}
+          </div>
+          {tab === "info" ? (
+            <div key="info" className="tab-in grid gap-1">
+              <p className="text-muted">{folder.email} · {folder.phone || "no phone"} · {folder.username || "no username"}</p>
+              <p>Plan {folder.tier || "none"} · quota left {folder.quota ?? "none"}% {folder.expires ? `· plan ends ${when(folder.expires)}` : ""}</p>
+              <p>{[folder.gender, folder.dob, folder.nationality, folder.state, folder.address].filter(Boolean).join(" · ") || "Profile still thin"}</p>
+              <p>Blood {folder.blood_group || "unknown"} · genotype {folder.genotype || "unknown"}</p>
+              <p>Next of kin {folder.kin || "not set"} {folder.kin_phone || ""}</p>
+            </div>
+          ) : null}
+          {tab === "chart" ? (
+            <div key="chart" className="tab-in grid gap-3">
+              <p className="text-muted">What the clinician writes while the person is under care. Members do not see this chart.</p>
+              <form className="grid gap-2" onSubmit={saveNote}>
+                <select value={kind} onChange={(e) => setKind(e.target.value)} className="rounded-xl border border-border bg-bg px-3 py-2 text-sm">
+                  {CHART_KINDS.map((item) => (
+                    <option key={item.id} value={item.id}>{item.label}</option>
+                  ))}
+                </select>
+                <textarea
+                  required
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  rows={4}
+                  placeholder="Sickness, medicine given, progress, or the next visit"
+                  className="rounded-xl border border-border bg-bg px-3 py-2 text-sm"
+                />
+                <button type="submit" className="btn-press w-fit text-sm font-semibold text-primary">Save on the chart</button>
+              </form>
+              {notes.length === 0 ? <p className="text-muted">No clinical notes yet.</p> : null}
+              {notes.map((note) => (
+                <p key={note.id}>
+                  <span className="font-semibold">{CHART_KINDS.find((k) => k.id === note.kind)?.label || note.kind}</span>
+                  <span className="text-muted"> · {when(note.at)} · {note.author || "Desk"}</span>
+                  <span className="mt-1 block whitespace-pre-wrap">{note.body}</span>
+                </p>
+              ))}
+            </div>
+          ) : null}
+          {tab === "codes" ? (
+            <div key="codes" className="tab-in grid gap-1">
+              {(folder.codes || []).length === 0 ? <p className="text-muted">No codes.</p> : null}
+              {(folder.codes || []).map((c) => (
+                <p key={c.code}>{c.code} · {c.remaining}/{c.allocated}% · {c.status} · {when(c.issued_at)}</p>
+              ))}
+            </div>
+          ) : null}
+          {tab === "visits" ? (
+            <div key="visits" className="tab-in grid gap-1">
+              {(folder.visits || []).length === 0 ? <p className="text-muted">No visits.</p> : null}
+              {(folder.visits || []).map((v, i) => (
+                <p key={`${v.when}-${i}`}>{v.kind} · {when(v.when)} · {v.minutes} min · {v.status} · {v.notes || ""}</p>
+              ))}
+            </div>
+          ) : null}
+          {tab === "wallet" ? (
+            <div key="wallet" className="tab-in grid gap-1">
+              <p>Wallet {money(folder.balance)} · account {folder.account_number}</p>
+              <p>Bank {folder.bank_name || "not set"} · {folder.bank_account_name || ""} · {folder.bank_account || ""}</p>
+              {(folder.tx || []).map((t, i) => (
+                <p key={`${t.at}-${i}`} className="text-muted">{when(t.at)} · {t.kind} · {t.amount} · {t.note}</p>
+              ))}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </section>
@@ -645,6 +933,11 @@ function RolesPane({ superAdmin }: { superAdmin: boolean }) {
   const [name, setName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<number | "">("");
+  const [invitePassword, setInvitePassword] = useState("");
+  const [picked, setPicked] = useState<string | null>(null);
+  const [sheet, setSheet] = useState<StaffAction[]>([]);
+  const [editRole, setEditRole] = useState<number | "">("");
+  const [editPassword, setEditPassword] = useState("");
 
   async function load() {
     try {
@@ -684,12 +977,62 @@ function RolesPane({ superAdmin }: { superAdmin: boolean }) {
     e.preventDefault();
     if (inviteRole === "") return;
     try {
-      await rpc("sh_admin_invite", { p_email: inviteEmail, p_role_id: inviteRole });
+      await rpc("sh_admin_provision", {
+        p_email: inviteEmail,
+        p_password: invitePassword,
+        p_role_id: inviteRole,
+      });
       setInviteEmail("");
-      toast("Invite saved. They sign in at /admin with their own password, then set up 2FA.");
+      setInvitePassword("");
+      toast("Staff access saved. They sign in at /admin, then set up 2FA.");
       await load();
     } catch (err) {
-      toast(err instanceof Error ? err.message : "Could not invite");
+      toast(err instanceof Error ? err.message : "Could not create that access");
+    }
+  }
+
+  async function openPerson(email: string, roleId?: number) {
+    setPicked(email);
+    setEditPassword("");
+    setEditRole(roleId ?? "");
+    try {
+      const data = await rpc<{ actions: StaffAction[] }>("sh_admin_staff_sheet", { p_email: email });
+      setSheet(Array.isArray(data?.actions) ? data.actions : []);
+    } catch (err) {
+      setSheet([]);
+      toast(err instanceof Error ? err.message : "Could not open that person");
+    }
+  }
+
+  async function saveAccess(e: FormEvent) {
+    e.preventDefault();
+    if (!picked || editRole === "") return;
+    try {
+      await rpc("sh_admin_provision", {
+        p_email: picked,
+        p_password: editPassword,
+        p_role_id: editRole,
+      });
+      setEditPassword("");
+      toast(editPassword ? "Password and role saved" : "Role saved");
+      await load();
+      await openPerson(picked, Number(editRole));
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Could not save that access");
+    }
+  }
+
+  async function removePerson(email: string) {
+    try {
+      await rpc("sh_admin_drop_staff", { p_email: email });
+      if (picked === email) {
+        setPicked(null);
+        setSheet([]);
+      }
+      toast("Staff access removed");
+      await load();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Could not remove that access");
     }
   }
 
@@ -698,7 +1041,7 @@ function RolesPane({ superAdmin }: { superAdmin: boolean }) {
       <div>
         <h1 className="text-3xl">Roles</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted">
-          Create a role, tick what it may touch, then invite a hospital email. If they already have a member account, the role attaches now. If not, it attaches the first time they sign in. Every staff member still sets up their own authenticator.
+          Only the super admin sets a password. Create the role, tick what it may touch, then give the person an email, a role, and a password. They still set up their own authenticator on first sign-in. Open a person to see what they did, change the password, or remove the access.
         </p>
       </div>
       {!data ? <HeartbeatLoader label="Loading roles" /> : null}
@@ -726,9 +1069,11 @@ function RolesPane({ superAdmin }: { superAdmin: boolean }) {
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="New role name" className="rounded-xl border border-border bg-bg px-3 py-2 text-sm" />
         <button type="submit" className="text-sm font-semibold text-primary">Create role</button>
       </form>
+      {superAdmin ? (
       <form className="grid max-w-md gap-2" onSubmit={invite}>
-        <p className="text-sm font-semibold">Invite staff</p>
+        <p className="text-sm font-semibold">Give someone a role</p>
         <input type="email" required value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="Email" className="rounded-xl border border-border bg-bg px-3 py-2 text-sm" />
+        <input type="password" required minLength={8} value={invitePassword} onChange={(e) => setInvitePassword(e.target.value)} placeholder="Access password" autoComplete="new-password" className="rounded-xl border border-border bg-bg px-3 py-2 text-sm" />
         <select
           required
           value={inviteRole}
@@ -741,15 +1086,21 @@ function RolesPane({ superAdmin }: { superAdmin: boolean }) {
           ))}
         </select>
         <button type="submit" className="btn-press w-fit rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-fg">
-          Invite
+          Save access
         </button>
       </form>
+      ) : (
+        <p className="text-sm text-muted">Only the super admin can create a password or change one.</p>
+      )}
       <div className="grid gap-2">
         <h2 className="text-lg font-semibold">People holding a role</h2>
         {(data?.staff || []).length === 0 ? <p className="text-sm text-muted">No one assigned yet.</p> : null}
         {(data?.staff || []).map((s) => (
           <div key={s.user_id} className="flex flex-wrap items-center justify-between gap-2 border-b border-border py-2 text-sm">
-            <span>{s.name} · {s.email} · {s.role_name} · {s.active ? "active" : "paused"}</span>
+            <button type="button" className="text-left" onClick={() => void openPerson(s.email, s.role_id)}>
+              <span className="font-semibold">{s.name}</span>
+              <span className="text-muted"> · {s.email} · {s.role_name} · {s.active ? "active" : "paused"}</span>
+            </button>
             <span className="flex gap-3">
               <button
                 type="button"
@@ -772,11 +1123,62 @@ function RolesPane({ superAdmin }: { superAdmin: boolean }) {
         ))}
       </div>
       <div className="grid gap-1 text-sm">
-        <h2 className="text-lg font-semibold">Invites</h2>
-        {(data?.invites || []).map((i) => (
-          <p key={i.id} className="text-muted">{i.email} · {i.role_name} · {i.accepted ? "accepted" : "waiting"} · {when(i.created_at)}</p>
+        <h2 className="text-lg font-semibold">People with access</h2>
+        {(data?.invites || []).length === 0 && (data?.staff || []).length === 0 ? (
+          <p className="text-muted">No one yet.</p>
+        ) : null}
+        {(data?.invites || []).map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className="border-b border-border py-2 text-left text-muted"
+              onClick={() => void openPerson(item.email)}
+            >
+              {item.email} · {item.role_name} · {item.accepted ? "accepted" : "waiting"} · {when(item.created_at)}
+            </button>
         ))}
       </div>
+      {picked ? (
+        <div className="grid gap-3 border-t border-border pt-4 text-sm">
+          <h2 className="text-lg font-semibold">{picked}</h2>
+          {superAdmin ? (
+          <form className="grid max-w-md gap-2" onSubmit={saveAccess}>
+            <select
+              required
+              value={editRole}
+              onChange={(e) => setEditRole(Number(e.target.value))}
+              className="rounded-xl border border-border bg-bg px-3 py-2 text-sm"
+            >
+              <option value="">Role</option>
+              {(data?.roles || []).map((r) => (
+                <option key={r.id} value={r.id}>{r.name}</option>
+              ))}
+            </select>
+            <input
+              type="password"
+              value={editPassword}
+              onChange={(e) => setEditPassword(e.target.value)}
+              placeholder="New password, leave blank to keep"
+              autoComplete="new-password"
+              className="rounded-xl border border-border bg-bg px-3 py-2 text-sm"
+            />
+            <div className="flex flex-wrap gap-4">
+              <button type="submit" className="font-semibold text-primary">Save access</button>
+              <button type="button" className="font-semibold text-danger" onClick={() => void removePerson(picked)}>
+                Remove access
+              </button>
+            </div>
+          </form>
+          ) : null}
+          <h3 className="font-semibold">What they did</h3>
+          {sheet.length === 0 ? <p className="text-muted">No desk actions under this email yet.</p> : null}
+          {sheet.map((row, i) => (
+            <p key={`${row.at}-${i}`} className="text-muted">
+              {when(row.at)} · {row.action} · {row.details}
+            </p>
+          ))}
+        </div>
+      ) : null}
     </section>
   );
 }

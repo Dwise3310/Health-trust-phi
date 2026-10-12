@@ -35,7 +35,7 @@ export function Header({ signedIn }: { signedIn?: boolean }) {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-bg/90 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
-        <NavLink href="/" className="flex items-center gap-2">
+        <NavLink href="/" aria-label="Sure Health, go to the home page" className="flex items-center gap-2">
           {logo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={logo} alt="" className="size-9 rounded-full object-cover" />

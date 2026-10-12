@@ -25,6 +25,7 @@ export const ADMIN_PERMISSIONS: { id: string; label: string }[] = [
   { id: "deletions.manage", label: "Data deletion" },
   { id: "codes.check", label: "Reception code check" },
   { id: "patients.view", label: "Patient folders" },
+  { id: "records.write", label: "Write the chart" },
   { id: "roles.manage", label: "Roles and invites" },
   { id: "branding.manage", label: "Logo" },
   { id: "audit.view", label: "Audit log" },

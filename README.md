@@ -50,12 +50,20 @@ Run these files in the Supabase SQL editor, in order, on a fresh project:
    - `supabase/08g-hooks.sql`
    - `supabase/08h-grants.sql`
 9. `supabase/09-admin-user.sql`
+10. `supabase/10a-analytics.sql`
+11. `supabase/10b-sync.sql`
 
 Part 9 stores the bootstrap super admin in the database.
 The email and password are in that SQL file, not in the app.
 The first sign-in asks you to turn on an authenticator app.
 
-If the member site already works, run only the 08a to 08h files, then part 9.
+If the staff desk is already open, do not re-run parts 1 to 9.
+Run only these two, in order:
+
+- `supabase/10a-analytics.sql` (stops the analytics spinner)
+- `supabase/10b-sync.sql` (print slips, charts, delivery, card codes, staff passwords)
+
+If the member site already works and you have not opened the staff desk yet, run 08a through 08h, then part 9, then 10a and 10b.
 Do not re-run part 1.
 
 If login already works and features say `permission denied for table`, run

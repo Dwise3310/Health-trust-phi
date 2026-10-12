@@ -30,9 +30,17 @@ type Card = {
   health_cost: number;
   status: string;
   created_at: string;
+  public_code?: string | null;
 };
 
 type Kind = "physical" | "audio";
+
+const VISIT_LABEL: Record<string, string> = {
+  open: "Waiting on reception",
+  confirmed: "Confirmed",
+  done: "Done",
+  cancelled: "Cancelled",
+};
 
 export default function AppointmentsPage() {
   const { toast } = useToast();
@@ -58,12 +66,21 @@ export default function AppointmentsPage() {
       .eq("user_id", userId)
       .order("scheduled_at", { ascending: false });
     setBookings((a as Booking[]) || []);
-    const { data: c } = await supabase
+    const withCode = await supabase
       .from("appointment_cards")
-      .select("id, card_type, health_cost, status, created_at")
+      .select("id, card_type, health_cost, status, created_at, public_code")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
-    setCards((c as Card[]) || []);
+    if (withCode.error) {
+      const plain = await supabase
+        .from("appointment_cards")
+        .select("id, card_type, health_cost, status, created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      setCards((plain.data as Card[]) || []);
+      return;
+    }
+    setCards((withCode.data as Card[]) || []);
   }
 
   useEffect(() => {
@@ -107,7 +124,7 @@ export default function AppointmentsPage() {
       toast(error.message);
       return;
     }
-    toast("Visit booked");
+    toast("Visit booked. Reception will confirm it, and the status here will change.");
     setNote("");
     setWhen("");
     void load(uid);
@@ -126,7 +143,7 @@ export default function AppointmentsPage() {
       toast(error.message);
       return;
     }
-    toast(`${type === "vip" ? "VIP" : "Normal"} card issued`);
+    toast(`${type === "vip" ? "VIP" : "Normal"} card issued. Take the code to reception.`);
     void load(uid);
   }
 
@@ -251,6 +268,7 @@ export default function AppointmentsPage() {
 
       <section className="grid gap-3">
         <h2 className="text-lg">Your visits</h2>
+        <p className="text-sm text-muted">Waiting means the desk has not confirmed the time yet. Confirmed means reception has accepted it.</p>
         {bookings.length === 0 ? (
           <p className="text-sm text-muted">No visits yet. Your bookings will appear here.</p>
         ) : (
@@ -264,7 +282,7 @@ export default function AppointmentsPage() {
                   <p className="mt-1 text-sm text-muted">{formatWhen(b.scheduled_at)}</p>
                   <p className="mt-1 text-sm tabular-nums">{formatHealth(Number(b.health_cost))}</p>
                 </div>
-                <StatusChip label={b.status} tone={statusTone(b.status)} />
+                <StatusChip label={VISIT_LABEL[b.status] || b.status} tone={statusTone(b.status)} />
               </li>
             ))}
           </ul>
@@ -274,8 +292,7 @@ export default function AppointmentsPage() {
       <section className="grid gap-3">
         <h2 className="text-lg">Appointment cards</h2>
         <p className="text-sm text-muted">
-          A normal card holds your place at reception. A VIP card is for immediate consultation. Prime
-          members still sit in the Prime lounge on arrival.
+          A normal card holds your place at reception. A VIP card is for immediate consultation. After you pay, a code appears here. Take that code to the desk. Prime members still sit in the Prime lounge on arrival.
         </p>
         <div className="split" style={{ "--cols": 2 } as React.CSSProperties}>
           <article className="flex flex-col gap-3">
@@ -303,11 +320,9 @@ export default function AppointmentsPage() {
             {cards.map((c) => (
               <li key={c.id} className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="font-mono uppercase">
-                    {c.card_type}-{c.id}
-                  </p>
+                  <p className="font-mono text-lg uppercase">{c.public_code || "Code pending"}</p>
                   <p className="mt-1 text-sm text-muted">
-                    Issued {formatWhen(c.created_at)} · {formatHealth(Number(c.health_cost))}
+                    {c.card_type === "vip" ? "VIP" : "Normal"} · issued {formatWhen(c.created_at)} · {formatHealth(Number(c.health_cost))}
                   </p>
                 </div>
                 <StatusChip label={c.status} tone={statusTone(c.status)} />

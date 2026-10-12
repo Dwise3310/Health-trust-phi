@@ -170,7 +170,7 @@ export function DashSidebar() {
 
   return (
     <aside className="side-rail" aria-label="Member desk">
-      <NavLink href="/dashboard" press={false} className="flex items-center gap-3 px-2">
+      <NavLink href="/" press={false} className="flex items-center gap-3 px-2">
         <span className="grid size-9 place-items-center rounded-full bg-primary text-[11px] font-semibold text-primary-fg">
           SH
         </span>

@@ -107,7 +107,7 @@ export default function DashboardLayout({
     <div className="min-h-screen bg-bg">
       <header className="sticky top-0 z-40 border-b border-border bg-bg/90 backdrop-blur-md lg:hidden">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <Link href="/dashboard" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2">
             <span className="grid size-9 place-items-center rounded-full bg-primary text-[11px] font-semibold text-primary-fg">
               SH
             </span>

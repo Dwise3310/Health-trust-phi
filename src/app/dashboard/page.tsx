@@ -16,6 +16,7 @@ type Sub = {
 };
 
 type Visit = { id: number; kind: string; scheduled_at: string; duration_min: number };
+type Notice = { id: number; title: string; body: string; at: string };
 
 function greeting() {
   const h = new Date().getHours();
@@ -39,6 +40,7 @@ export default function HomePage() {
   const [sub, setSub] = useState<Sub | null>(null);
   const [visit, setVisit] = useState<Visit | null>(null);
   const [doneMissions, setDoneMissions] = useState<string[]>([]);
+  const [notices, setNotices] = useState<Notice[]>([]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -77,6 +79,11 @@ export default function HomePage() {
       setSub((subRow.data as Sub) || null);
       setVisit((visitRow.data as Visit) || null);
       setDoneMissions((missionRows.data || []).map((r: { mission_id: string }) => r.mission_id));
+      const { data: board } = await supabase.rpc("sh_my_board");
+      const list = board && typeof board === "object" && "notices" in board
+        ? (board as { notices: Notice[] }).notices
+        : [];
+      setNotices(Array.isArray(list) ? list.slice(0, 5) : []);
       setLoaded(true);
     });
 
@@ -187,6 +194,20 @@ export default function HomePage() {
           )}
         </section>
       </div>
+
+      {notices.length > 0 ? (
+        <section className="grid gap-2">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted">From the desk</h2>
+          <ul>
+            {notices.map((note) => (
+              <li key={note.id} className="border-b border-border py-3 text-sm">
+                <p className="font-semibold">{note.title}</p>
+                <p className="mt-1 text-muted">{note.body}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section className="grid gap-3">
         <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted">Do something</h2>
